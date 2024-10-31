@@ -37,7 +37,7 @@ class BotUI:
         self.start_button = tk.Button(button_frame, text="Start Bot", command=self.start_bot, width=12, relief=tk.RAISED, bd=3, font=("Helvetica", 10))
         self.start_button.pack(side=tk.LEFT, padx=5)  # Place on the left in row
 
-        self.stop_button = tk.Button(button_frame, text="Stop Script", command=self.stop_bot, state=tk.DISABLED, width=12, relief=tk.RAISED, bd=3, font=("Helvetica", 10))
+        self.stop_button = tk.Button(button_frame, text="Stop Bot", command=self.stop_bot, state=tk.DISABLED, width=12, relief=tk.RAISED, bd=3, font=("Helvetica", 10))
         self.stop_button.pack(side=tk.LEFT, padx=5)  # Place next to Start button
 
         # Add the Screenshot button below Start and Stop buttons
