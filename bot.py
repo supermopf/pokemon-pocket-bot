@@ -1,7 +1,20 @@
 import time
 import cv2
 from adb_utils import connect_to_emulator, click_position, take_screenshot, find_subimage
-from constants import BATTLE_SCREEN, BATTLE_ALREADY_SCREEN, VERSUS_SCREEN, RANDOM_MATCH_SCREEN, BATTLE_BUTTON
+from constants import (
+    BATTLE_SCREEN,
+    BATTLE_ALREADY_SCREEN,
+    VERSUS_SCREEN,
+    RANDOM_MATCH_SCREEN,
+    BATTLE_BUTTON,
+    MATCH_MENU_BUTTON,
+    CONCEDE_BUTTON,
+    CONCEDE_ACCEPT_BUTTON,
+    TAP_TO_PROCEED_BUTTON,
+    NEXT_BUTTON,
+    THANKS_BUTTON,
+    CROSS_BUTTON
+)
 
 class PokemonBot:
     def __init__(self, app_state, log_callback):
@@ -13,6 +26,13 @@ class PokemonBot:
         self.VERSUS_SCREEN = cv2.imread(VERSUS_SCREEN)
         self.RANDOM_MATCH_SCREEN = cv2.imread(RANDOM_MATCH_SCREEN)
         self.BATTLE_BUTTON = cv2.imread(BATTLE_BUTTON)
+        self.MATCH_MENU_BUTTON = cv2.imread(MATCH_MENU_BUTTON)
+        self.CONCEDE_BUTTON = cv2.imread(CONCEDE_BUTTON)
+        self.CONCEDE_ACCEPT_BUTTON = cv2.imread(CONCEDE_ACCEPT_BUTTON)
+        self.TAP_TO_PROCEED_BUTTON = cv2.imread(TAP_TO_PROCEED_BUTTON)
+        self.NEXT_BUTTON = cv2.imread(NEXT_BUTTON)
+        self.THANKS_BUTTON = cv2.imread(THANKS_BUTTON)
+        self.CROSS_BUTTON = cv2.imread(CROSS_BUTTON)
 
     def start(self):
         if not self.app_state.program_path:
@@ -36,6 +56,13 @@ class PokemonBot:
         self.check_and_click_until_found(self.VERSUS_SCREEN, "Versus screen")
         self.check_and_click_until_found(self.RANDOM_MATCH_SCREEN, "Random match screen")
         self.check_and_click_until_found(self.BATTLE_BUTTON, "Battle button")
+        self.check_and_click_until_found(self.MATCH_MENU_BUTTON, "Match menu button")
+        self.check_and_click_until_found(self.CONCEDE_BUTTON, "Concede button")
+        self.check_and_click_until_found(self.CONCEDE_ACCEPT_BUTTON, "Concede accept button")
+        self.check_and_click_until_found(self.TAP_TO_PROCEED_BUTTON, "Tap to proceed button")
+        self.check_and_click_until_found(self.NEXT_BUTTON, "Next button")
+        self.check_and_click_until_found(self.THANKS_BUTTON, "Thanks button")
+        self.check_and_click_until_found(self.CROSS_BUTTON, "Cross button")
 
     def check(self, screenshot, template_image, log_message, similarity_threshold=0.8):
         _, similarity = find_subimage(screenshot, template_image)
@@ -56,7 +83,6 @@ class PokemonBot:
             return False   
 
     def check_and_click_until_found(self, template_image, log_message, similarity_threshold=0.8, timeout=30):
-        """Continuously captures a screenshot and checks for an image until found, looping every 0.5 seconds or until timeout."""
         start_time = time.time()
 
         while True:

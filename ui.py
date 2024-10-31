@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import filedialog
 from config_manager import ConfigManager
 from bot import PokemonBot
-from adb_utils import connect_to_emulator
+from adb_utils import connect_to_emulator, take_screenshot
 
 class BotUI:
     def __init__(self, root, app_state):
@@ -30,15 +30,21 @@ class BotUI:
         self.selected_emulator_label = tk.Label(select_path_frame, text="", font=("Helvetica", 10))
         self.selected_emulator_label.pack(side=tk.LEFT)
 
+        # Frame for Start and Stop buttons on the same row
         button_frame = tk.Frame(self.root)
         button_frame.pack(pady=10)
 
         self.start_button = tk.Button(button_frame, text="Start Bot", command=self.start_bot, width=12, relief=tk.RAISED, bd=3, font=("Helvetica", 10))
-        self.start_button.pack(pady=10)
+        self.start_button.pack(side=tk.LEFT, padx=5)  # Place on the left in row
 
-        self.stop_button = tk.Button(self.root, text="Stop Script", command=self.stop_bot, state=tk.DISABLED, width=12, relief=tk.RAISED, bd=3, font=("Helvetica", 10))
-        self.stop_button.pack(pady=10)
+        self.stop_button = tk.Button(button_frame, text="Stop Script", command=self.stop_bot, state=tk.DISABLED, width=12, relief=tk.RAISED, bd=3, font=("Helvetica", 10))
+        self.stop_button.pack(side=tk.LEFT, padx=5)  # Place next to Start button
 
+        # Add the Screenshot button below Start and Stop buttons
+        self.screenshot_button = tk.Button(self.root, text="Screenshot", command=self.take_screenshot, width=12, relief=tk.RAISED, bd=3, font=("Helvetica", 10))
+        self.screenshot_button.pack(pady=10)  # Place below the button_frame
+
+        # Status and log sections
         self.status_label = tk.Label(self.root, text="Status: Not running", font=("Helvetica", 10))
         self.status_label.pack()
 
@@ -75,3 +81,5 @@ class BotUI:
             self.selected_emulator_label.config(text=emulator_path)
             self.log_message("Emulator path selected and saved.")
 
+    def take_screenshot(self):
+        take_screenshot()
