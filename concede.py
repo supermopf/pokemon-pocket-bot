@@ -6,7 +6,7 @@ from adb_utils import connect_to_emulator, click_position, take_screenshot, find
 from loaders import load_template_images
 
 
-class PokemonBot:
+class PokemonConcedeBot:
     def __init__(self, app_state, log_callback):
         self.app_state = app_state
         self.log_callback = log_callback
@@ -18,6 +18,7 @@ class PokemonBot:
         self.card_y = 1500
         self.card_offset_x = 60
         self.zoom_card_region = (200, 360, 570, 400)
+
 
     def start(self):
         if not self.app_state.program_path:
@@ -36,25 +37,13 @@ class PokemonBot:
 
     def run_script(self):
         while self.running:
-            #screenshot = take_screenshot()
+            screenshot = take_screenshot()
 
-            ### GO THROUGH MENUS TO FIND A BATTLE
-            #if not self.check_and_click(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen"):
-            #    self.check_and_click(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen")
-            #time.sleep(1)
-            #self.perform_search_battle_actions()
-
-            ### BATTLE START
-            #self.check_and_click_until_found(self.template_images["TIME_LIMIT_INDICATOR"], "Time limit indicator")
-            #screenshot = take_screenshot()
-            #if not self.check(screenshot, self.template_images["GOING_FIRST_INDICATOR"], "Going first"):
-            #    self.check(screenshot, self.template_images["GOING_SECOND_INDICATOR"], "Going second")
-            self.check_cards()
-
-            if self.check_turn():
-                self.play_turn()
-
-
+            if not self.check_and_click(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen"):
+                self.check_and_click(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen")
+            time.sleep(1)
+            self.perform_search_battle_actions()
+            self.perform_concede_actions()
 
     def perform_search_battle_actions(self):
         for key in [
@@ -64,77 +53,6 @@ class PokemonBot:
         ]:
             if not self.check_and_click_until_found(self.template_images[key], f"{key.replace('_', ' ').title()}"):
                 break
-
-    def play_turn(self):
-        if not self.running:
-            return False
-        # Logic to select and play cards goes here
-        self.log_callback("Playing turn actions...")
-        # Example: self.check_and_click_until_found(self.template_images["SOME_CARD"], "Card X")
-
-    def check_turn(self): 
-        if not self.running:
-            return False
-        screenshot1 = self.capture_region(self.turn_check_region)
-        time.sleep(1)
-        screenshot2 = self.capture_region(self.turn_check_region)
-
-        similarity = self.calculate_similarity(screenshot1, screenshot2)
-        if similarity < 0.95:
-            self.log_callback("It's your turn! Taking action...")
-        else:
-            self.log_callback("Waiting for opponent's turn...")
-
-        return similarity < 0.95
-    
-
-    def check_cards(self):
-        x = self.card_start_x
-        num_cards_to_check = 5
-
-        for i in range(num_cards_to_check):
-            if not self.running:
-                break
-            self.log_callback(f"Checking card {i+1} at position ({x}, {self.card_y})")
-
-            zoomed_card_image = self.get_card(x, self.card_y)
-            cv2.imwrite(f"debug_screenshot{i}.png", zoomed_card_image)
-            #card_name = self.identify_card(zoomed_card_image)
-            #if card_name:
-            #    self.log_callback(f"Card {i+1} identified as: {card_name}")
-            #else:
-            #    self.log_callback(f"Card {i+1} not recognized.")
-            x -= self.card_offset_x
-
-    def get_card(self, x, y, duration=1.0):
-        x_zoom_card_region, y_zoom_card_region, w, h = self.zoom_card_region
-        return long_press_position(x, y)[y_zoom_card_region:y_zoom_card_region+h, x_zoom_card_region:x_zoom_card_region+w]
-
-    def identify_card(self, zoomed_card_image):
-        highest_similarity = 0
-        identified_card = None
-
-        for card_name, template_image in self.template_images.items():
-            _, similarity = find_subimage(zoomed_card_image, template_image)
-            if similarity > 0.8 and similarity > highest_similarity:
-                highest_similarity = similarity
-                identified_card = card_name
-
-        return identified_card
-
-    def capture_region(self, region):
-        x, y, w, h = region
-        screenshot = take_screenshot()
-        return screenshot[y:y+h, x:x+w]
-
-    def calculate_similarity(self, img1, img2):
-        """Calculate similarity between two images using structural similarity index (SSIM)."""
-        if img1.shape != img2.shape:
-            return 0
-        img1_gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-        img2_gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
-        return np.mean(img1_gray == img2_gray)
-
 
     def perform_concede_actions(self):
         for key in [
