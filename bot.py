@@ -60,17 +60,23 @@ class PokemonBot:
             screenshot = take_screenshot()
             if not self.check_and_click(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen"):
                 self.check_and_click(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen")
-            time.sleep(1)    
-            self.perform_concede_actions()
-            time.sleep(2)
-            self.check_and_click_until_found(self.template_images["CROSS_BUTTON"], "Cross button")
-            time.sleep(4)
+            time.sleep(1)
+            self.perform_search_battle_actions()
+            #self.perform_concede_actions()
 
-    def perform_concede_actions(self):
+
+    def perform_search_battle_actions(self):
         for key in [
             "VERSUS_SCREEN",
             "RANDOM_MATCH_SCREEN",
             "BATTLE_BUTTON",
+        ]:
+            if not self.check_and_click_until_found(self.template_images[key], f"{key.replace('_', ' ').title()}"):
+                break
+
+
+    def perform_concede_actions(self):
+        for key in [
             "MATCH_MENU_BUTTON",
             "CONCEDE_BUTTON",
             "CONCEDE_ACCEPT_BUTTON",
@@ -80,6 +86,9 @@ class PokemonBot:
         ]:
             if not self.check_and_click_until_found(self.template_images[key], f"{key.replace('_', ' ').title()}"):
                 break
+        time.sleep(2)
+        self.check_and_click_until_found(self.template_images["CROSS_BUTTON"], "Cross button")
+        time.sleep(4)
 
     def check(self, screenshot, template_image, log_message, similarity_threshold=0.8):
         _, similarity = find_subimage(screenshot, template_image)
