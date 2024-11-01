@@ -3,7 +3,10 @@ import cv2
 import threading
 import numpy as np
 from adb_utils import connect_to_emulator, click_position, take_screenshot, find_subimage, long_press_position
-from loaders import load_template_images
+from loaders import load_template_images, load_all_cards
+import uuid
+import os
+import easyocr
 
 
 class PokemonBot:
@@ -11,13 +14,16 @@ class PokemonBot:
         self.app_state = app_state
         self.log_callback = log_callback
         self.running = False
-        self.template_images = load_template_images()
+        self.template_images = load_template_images("images")
         
         self.turn_check_region = (50, 1560, 200, 20)
         self.card_start_x = 500
         self.card_y = 1500
         self.card_offset_x = 60
         self.zoom_card_region = (200, 360, 570, 400)
+        self.card_images = load_all_cards("images/cards")
+        self.number_of_cards_region = (790, 1325, 60, 50)
+        self.reader = easyocr.Reader(['en'])
 
     def start(self):
         if not self.app_state.program_path:
@@ -49,7 +55,9 @@ class PokemonBot:
             #screenshot = take_screenshot()
             #if not self.check(screenshot, self.template_images["GOING_FIRST_INDICATOR"], "Going first"):
             #    self.check(screenshot, self.template_images["GOING_SECOND_INDICATOR"], "Going second")
-            self.check_cards()
+            
+            number_of_cards = int(self.check_number_of_cards(500, 1500))
+            self.check_cards(number_of_cards)
 
             if self.check_turn():
                 self.play_turn()
@@ -88,9 +96,10 @@ class PokemonBot:
         return similarity < 0.95
     
 
-    def check_cards(self):
+    def check_cards(self, number_of_cards):
         x = self.card_start_x
-        num_cards_to_check = 5
+        num_cards_to_check = number_of_cards
+        hand_cards = []
 
         for i in range(num_cards_to_check):
             if not self.running:
@@ -98,13 +107,18 @@ class PokemonBot:
             self.log_callback(f"Checking card {i+1} at position ({x}, {self.card_y})")
 
             zoomed_card_image = self.get_card(x, self.card_y)
-            cv2.imwrite(f"debug_screenshot{i}.png", zoomed_card_image)
-            #card_name = self.identify_card(zoomed_card_image)
-            #if card_name:
-            #    self.log_callback(f"Card {i+1} identified as: {card_name}")
-            #else:
-            #    self.log_callback(f"Card {i+1} not recognized.")
-            x -= self.card_offset_x
+            unique_id = str(uuid.uuid4())
+            cv2.imwrite(f"debug_screenshot{unique_id}.png", zoomed_card_image)
+            card_name = self.identify_card(zoomed_card_image)
+            hand_cards.append(card_name if card_name else "Unknown Card")
+
+            if num_cards_to_check <= 5:
+                x -= self.card_offset_x
+            else:
+                x -= 40    
+        hand_description = ', '.join(hand_cards)
+        self.log_callback(f"Your hand contains:")
+        self.log_callback(f"{hand_description}")
 
     def get_card(self, x, y, duration=1.0):
         x_zoom_card_region, y_zoom_card_region, w, h = self.zoom_card_region
@@ -114,13 +128,24 @@ class PokemonBot:
         highest_similarity = 0
         identified_card = None
 
-        for card_name, template_image in self.template_images.items():
+        for card_name, template_image in self.card_images.items():
+            base_card_name = os.path.splitext(card_name)[0]
             _, similarity = find_subimage(zoomed_card_image, template_image)
             if similarity > 0.8 and similarity > highest_similarity:
                 highest_similarity = similarity
-                identified_card = card_name
+                identified_card = base_card_name
 
         return identified_card
+
+    def check_number_of_cards(self, card_x, card_y):
+        long_press_position(card_x, card_y, 4)
+        
+        number_image = self.capture_region(self.number_of_cards_region)
+        
+        number = self.extract_number_from_image(number_image)
+        self.log_callback(f"Number of cards: {number}")
+        
+        return number
 
     def capture_region(self, region):
         x, y, w, h = region
@@ -135,6 +160,20 @@ class PokemonBot:
         img2_gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
         return np.mean(img1_gray == img2_gray)
 
+    def extract_number_from_image(self, image):
+        # Convert to grayscale to improve OCR accuracy
+        grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Use EasyOCR to read text from the cropped image
+        result = self.reader.readtext(grayscale_image, detail=0)
+
+        # Filter out non-numeric results, assuming the region contains a number only
+        numbers = [text for text in result if text.isdigit()]
+        
+        if numbers:
+            return numbers[0]  # Return the first recognized number if found
+        else:
+            return None
 
     def perform_concede_actions(self):
         for key in [

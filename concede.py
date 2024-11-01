@@ -11,7 +11,7 @@ class PokemonConcedeBot:
         self.app_state = app_state
         self.log_callback = log_callback
         self.running = False
-        self.template_images = load_template_images()
+        self.template_images = load_template_images("images")
         
         self.turn_check_region = (50, 1560, 200, 20)
         self.card_start_x = 500

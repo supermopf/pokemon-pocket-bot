@@ -1,37 +1,40 @@
 import cv2
-from constants import (
-    BATTLE_SCREEN,
-    BATTLE_ALREADY_SCREEN,
-    VERSUS_SCREEN,
-    RANDOM_MATCH_SCREEN,
-    BATTLE_BUTTON,
-    MATCH_MENU_BUTTON,
-    CONCEDE_BUTTON,
-    CONCEDE_ACCEPT_BUTTON,
-    TAP_TO_PROCEED_BUTTON,
-    NEXT_BUTTON,
-    THANKS_BUTTON,
-    CROSS_BUTTON,
-    TIME_LIMIT_INDICATOR,
-    GOING_FIRST_INDICATOR,
-    GOING_SECOND_INDICATOR
-)
+import os
 
-def load_template_images():
-    return {
-        "BATTLE_SCREEN": cv2.imread(BATTLE_SCREEN),
-        "BATTLE_ALREADY_SCREEN": cv2.imread(BATTLE_ALREADY_SCREEN),
-        "VERSUS_SCREEN": cv2.imread(VERSUS_SCREEN),
-        "RANDOM_MATCH_SCREEN": cv2.imread(RANDOM_MATCH_SCREEN),
-        "BATTLE_BUTTON": cv2.imread(BATTLE_BUTTON),
-        "MATCH_MENU_BUTTON": cv2.imread(MATCH_MENU_BUTTON),
-        "CONCEDE_BUTTON": cv2.imread(CONCEDE_BUTTON),
-        "CONCEDE_ACCEPT_BUTTON": cv2.imread(CONCEDE_ACCEPT_BUTTON),
-        "TAP_TO_PROCEED_BUTTON": cv2.imread(TAP_TO_PROCEED_BUTTON),
-        "NEXT_BUTTON": cv2.imread(NEXT_BUTTON),
-        "THANKS_BUTTON": cv2.imread(THANKS_BUTTON),
-        "CROSS_BUTTON": cv2.imread(CROSS_BUTTON),
-        "TIME_LIMIT_INDICATOR": cv2.imread(TIME_LIMIT_INDICATOR),
-        "GOING_FIRST_INDICATOR": cv2.imread(GOING_FIRST_INDICATOR),
-        "GOING_SECOND_INDICATOR": cv2.imread(GOING_SECOND_INDICATOR)
-    }
+def load_template_images(template_folder):
+    template_images = {}
+
+    if not os.path.exists(template_folder):
+        print(f"Directory {template_folder} does not exist.")
+        return template_images
+
+    for filename in os.listdir(template_folder):
+        if filename.endswith(('.PNG')):
+            file_path = os.path.join(template_folder, filename)
+            image = cv2.imread(file_path)
+            if image is not None:
+                template_name = os.path.splitext(filename)[0].upper()
+                template_images[template_name] = image
+                print(f"Loaded template: {template_name}")
+            else:
+                print(f"Failed to load template: {file_path}")
+
+    return template_images
+def load_all_cards(image_folder):
+    card_images = {}
+    
+    if not os.path.exists(image_folder):
+        print(f"Directory {image_folder} does not exist.")
+        return card_images
+
+    for filename in os.listdir(image_folder):
+        if filename.endswith(('.png', '.jpg', '.jpeg')):
+            file_path = os.path.join(image_folder, filename)
+            image = cv2.imread(file_path)
+            if image is not None:
+                card_images[filename] = image
+                print(f"Loaded image: {filename}")
+            else:
+                print(f"Failed to load image: {file_path}")
+
+    return card_images
