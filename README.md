@@ -9,13 +9,12 @@ The Pokemon Pocket Bot is an automation tool designed to streamline gameplay wit
 
 - **1. Start LDPlayerEmulator**
 - **2. Enable ADB connection** Open Local connection
-- **3. Enable Fixed window size**
-- **4. Choose the resolution to be 1600x900 (dpi 240)**
-- **5. Install the requirements**: pip install -r requirements.txt
-- **6. Start the bot**: python __init__.py
-- **7. Start Pokemon Pocket**
-- **8. Choose the path to the emulator** You have to choose the main folder of the emulator (in the LDPlayer case would be LDPlayer/LDPlayer9)
-- **9. Start botting**
+- **3. Choose the resolution to be 1600x900 (dpi 240)**
+- **4. Install the requirements**: pip install -r requirements.txt
+- **5. Start the bot**: python app.py
+- **6. Start Pokemon Pocket**
+- **7. Choose the path to the emulator** You have to choose the main folder of the emulator (in the LDPlayer case would be LDPlayer/LDPlayer9)
+- **8. Start botting** You can choose between two modes, Auto Concede to farm fast matches and Start Bot, still WIP.
 
 ## Key Features:
 
