@@ -1,6 +1,7 @@
 import time
 import cv2
 import threading
+import numpy as np
 from adb_utils import connect_to_emulator, click_position, take_screenshot, find_subimage
 from constants import (
     BATTLE_SCREEN,
@@ -14,7 +15,10 @@ from constants import (
     TAP_TO_PROCEED_BUTTON,
     NEXT_BUTTON,
     THANKS_BUTTON,
-    CROSS_BUTTON
+    CROSS_BUTTON,
+    TIME_LIMIT_INDICATOR,
+    GOING_FIRST_INDICATOR,
+    GOING_SECOND_INDICATOR
 )
 
 class PokemonBot:
@@ -23,8 +27,11 @@ class PokemonBot:
         self.log_callback = log_callback
         self.running = False
         self.load_template_images()
+        
+        self.turn_check_region = (50, 1560, 200, 20)
 
     def load_template_images(self):
+        # Load all template images
         self.template_images = {
             "BATTLE_SCREEN": cv2.imread(BATTLE_SCREEN),
             "BATTLE_ALREADY_SCREEN": cv2.imread(BATTLE_ALREADY_SCREEN),
@@ -37,7 +44,10 @@ class PokemonBot:
             "TAP_TO_PROCEED_BUTTON": cv2.imread(TAP_TO_PROCEED_BUTTON),
             "NEXT_BUTTON": cv2.imread(NEXT_BUTTON),
             "THANKS_BUTTON": cv2.imread(THANKS_BUTTON),
-            "CROSS_BUTTON": cv2.imread(CROSS_BUTTON)
+            "CROSS_BUTTON": cv2.imread(CROSS_BUTTON),
+            "TIME_LIMIT_INDICATOR": cv2.imread(TIME_LIMIT_INDICATOR),
+            "GOING_FIRST_INDICATOR": cv2.imread(GOING_FIRST_INDICATOR),
+            "GOING_SECOND_INDICATOR": cv2.imread(GOING_SECOND_INDICATOR)
         }
 
     def start(self):
@@ -57,13 +67,24 @@ class PokemonBot:
 
     def run_script(self):
         while self.running:
+            #screenshot = take_screenshot()
+            #if not self.check_and_click(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen"):
+            #    self.check_and_click(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen")
+            #time.sleep(1)
+            #self.perform_search_battle_actions()
+            self.check_and_click_until_found(self.template_images["TIME_LIMIT_INDICATOR"], "Time limit indicator")
             screenshot = take_screenshot()
-            if not self.check_and_click(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen"):
-                self.check_and_click(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen")
-            time.sleep(1)
-            self.perform_search_battle_actions()
-            #self.perform_concede_actions()
+            if not self.check(screenshot, self.template_images["GOING_FIRST_INDICATOR"], "Going first"):
+                self.check(screenshot, self.template_images["GOING_SECOND_INDICATOR"], "Going second")
 
+
+            # Check if it is the player's turn
+            if self.check_turn():
+                self.log_callback("It's your turn! Taking action...")
+                self.play_turn()
+            else:
+                self.log_callback("Waiting for opponent's turn...")
+                time.sleep(1)
 
     def perform_search_battle_actions(self):
         for key in [
@@ -73,6 +94,36 @@ class PokemonBot:
         ]:
             if not self.check_and_click_until_found(self.template_images[key], f"{key.replace('_', ' ').title()}"):
                 break
+
+    def play_turn(self):
+        # Logic to select and play cards goes here
+        self.log_callback("Playing turn actions...")
+        # Example: self.check_and_click_until_found(self.template_images["SOME_CARD"], "Card X")
+
+    def check_turn(self):
+        screenshot1 = self.capture_region(self.turn_check_region)
+        time.sleep(1)
+        screenshot2 = self.capture_region(self.turn_check_region)
+
+        similarity = self.calculate_similarity(screenshot1, screenshot2)
+        cv2.imwrite("debug_screenshot1.png", screenshot1)
+        cv2.imwrite("debug_screenshot2.png", screenshot2)
+        self.log_callback(f"Turn check similarity: {similarity:.2f}")
+
+        return similarity < 0.95
+
+    def capture_region(self, region):
+        x, y, w, h = region
+        screenshot = take_screenshot()
+        return screenshot[y:y+h, x:x+w]
+
+    def calculate_similarity(self, img1, img2):
+        """Calculate similarity between two images using structural similarity index (SSIM)."""
+        if img1.shape != img2.shape:
+            return 0
+        img1_gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+        img2_gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+        return np.mean(img1_gray == img2_gray)
 
 
     def perform_concede_actions(self):
