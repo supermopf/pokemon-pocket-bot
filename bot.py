@@ -9,6 +9,7 @@ import os
 from deck import sandslash_deck 
 from image_utils import ImageProcessor
 from battle_actions import BattleActions
+from constants import default_pokemon_stats
 
 class PokemonBot:
     def __init__(self, app_state, log_callback):
@@ -16,9 +17,11 @@ class PokemonBot:
         self.log_callback = log_callback
         self.running = False
         self.template_images = load_template_images("images")
-        self.zoom_card_region = (200, 360, 570, 400)
         self.card_images = load_all_cards("images/cards")
+        self.deck_info = sandslash_deck
 
+        ## COORDS
+        self.zoom_card_region = (200, 360, 570, 400)
         self.turn_check_region = (50, 1560, 200, 20)
         self.center_x = 540
         self.center_y = 960
@@ -26,13 +29,14 @@ class PokemonBot:
         self.card_y = 1500
         self.card_offset_x = 60
         self.number_of_cards_region = (790, 1325, 60, 50)
-        self.deck_info = sandslash_deck
+
+        ## STATE
         self.hand_state = []
         self.active_pokemon = []
         self.bench_pokemon = []
 
         self.image_processor = ImageProcessor(self.log_callback)
-        self.battle_actions = BattleActions(self.image_processor, self.template_images, self.card_images, self.zoom_card_region, self.log_callback)
+        self.battle_actions = BattleActions(self.image_processor, self.template_images, self.card_images, self.zoom_card_region, self.number_of_cards_region, self.log_callback)
 
     def start(self):
         if not self.app_state.program_path:
@@ -68,7 +72,7 @@ class PokemonBot:
                 self.image_processor.check(screenshot, self.template_images["GOING_SECOND_INDICATOR"], "Going second")
             self.battle_actions.check_rival_concede(screenshot, self.running, self.stop)
             
-            number_of_cards = int(self.check_number_of_cards(500, 1500))
+            number_of_cards = int(self.battle_actions.check_number_of_cards(500, 1500))
             self.check_cards(number_of_cards)
             screenshot = take_screenshot()
             self.battle_actions.check_rival_concede(screenshot, self.running, self.stop)
@@ -85,8 +89,8 @@ class PokemonBot:
         self.log_callback("Playing turn actions...")
 
         # Check if there is an active Pokémon
-        zoomed_card_image = self.get_card(self.center_x, self.center_y, 2)
-        main_zone_pokemon_name = self.identify_card(zoomed_card_image)
+        zoomed_card_image = self.battle_actions.get_card(self.center_x, self.center_y, 3)
+        main_zone_pokemon_name = self.battle_actions.identify_card(zoomed_card_image)
             
         for card in self.hand_state:
             start_x = self.card_start_x - (card['position'] * self.card_offset_x)
@@ -152,18 +156,12 @@ class PokemonBot:
                 break
             self.log_callback(f"Checking card {i+1} at position ({x}, {self.card_y})")
 
-            zoomed_card_image = self.get_card(x, self.card_y)
+            zoomed_card_image = self.battle_actions.get_card(x, self.card_y)
             #cv2.imwrite(f"{i}.png",zoomed_card_image)
-            card_name = self.identify_card(zoomed_card_image)
+            card_name = self.battle_actions.identify_card(zoomed_card_image)
             hand_cards.append(card_name.capitalize() if card_name else "Unknown Card")
 
-            card_info = self.deck_info.get(card_name, {
-                "level": "N/A", 
-                "energies": "N/A", 
-                "evolves_from": "N/A", 
-                "can_evolve": "Unknown", 
-                "item_card": False
-            })
+            card_info = self.deck_info.get(card_name, default_pokemon_stats)
             
             card_info_with_position = {
                 "name": card_name,
@@ -199,31 +197,3 @@ class PokemonBot:
             # Log detailed information for each card with position
             self.log_callback(f"- Position {position}: {card_name} - Level {level}, Energies: {energies}, "
                             f"Evolves from: {evolves_from}, Can Evolve: {can_evolve}, {item_card}")
-
-
-    def get_card(self, x, y, duration=1.0):
-        x_zoom_card_region, y_zoom_card_region, w, h = self.zoom_card_region
-        return long_press_position(x, y, duration)[y_zoom_card_region:y_zoom_card_region+h, x_zoom_card_region:x_zoom_card_region+w]
-
-    def identify_card(self, zoomed_card_image):
-        highest_similarity = 0
-        identified_card = None
-
-        for card_name, template_image in self.card_images.items():
-            base_card_name = os.path.splitext(card_name)[0]
-            _, similarity = find_subimage(zoomed_card_image, template_image)
-            if similarity > 0.8 and similarity > highest_similarity:
-                highest_similarity = similarity
-                identified_card = base_card_name
-
-        return identified_card
-
-    def check_number_of_cards(self, card_x, card_y):
-        long_press_position(card_x, card_y, 2)
-        
-        number_image = self.image_processor.capture_region(self.number_of_cards_region)
-        
-        number = self.image_processor.extract_number_from_image(number_image)
-        self.log_callback(f"Number of cards: {number}")
-        
-        return number
