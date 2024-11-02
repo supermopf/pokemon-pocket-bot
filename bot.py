@@ -28,6 +28,8 @@ class PokemonBot:
         self.reader = easyocr.Reader(['en'])
         self.deck_info = sandslash_deck
         self.hand_state = []
+        self.active_pokemon = []
+        self.bench_pokemon = []
 
     def start(self):
         if not self.app_state.program_path:
@@ -87,21 +89,66 @@ class PokemonBot:
     def play_turn(self):
         if not self.running:
             return False
-        # Logic to select and play cards goes here
         self.log_callback("Playing turn actions...")
+
+        # Check if there is an active Pokémon
+        zoomed_card_image = self.get_card(self.center_x, self.center_y, 2)
+        main_zone_pokemon_name = self.identify_card(zoomed_card_image)
+            
         for card in self.hand_state:
-            if card['info']['level'] == 0 and not card['info']['item_card']:
-                start_x = self.card_start_x - (card['position'] * self.card_offset_x)
-
-                # Perform the drag action to play the card on the field
-                self.log_callback(f"Playing card from position {card['position']+1} on the field...")
+            start_x = self.card_start_x - (card['position'] * self.card_offset_x)
+            if not main_zone_pokemon_name and not self.active_pokemon and card['info']['level'] == 0 and not card['info']['item_card']:
                 drag_position((start_x, self.card_y), (self.center_x, self.center_y))
-                print(f"Playable card: {card['name']}")
-                print(f"Position: {card['position']}")
-                
-                
+                self.active_pokemon.append(card)
+                # If its the first turn, just start the battle
+                time.sleep(1)
+                screenshot = take_screenshot()
+                print("CLICK BATTLE START BUTTON")
 
-        # Example: self.check_and_click_until_found(self.template_images["SOME_CARD"], "Card X")
+                self.check_and_click(screenshot, self.template_images["START_BATTLE_BUTTON"], "Start battle button")
+
+            elif len(self.bench_pokemon) < 3:
+                if card['info']['level'] == 0 and not card['info']['item_card']:
+                    print("play to benchhh")
+                    self.log_callback(f"Playing card from position {card['position']+1} to bench...")
+
+                    drag_position((start_x, self.card_y), (len(self.bench_pokemon) * 200, self.center_y + 300))
+
+                    bench_pokemon_info = {
+                        "name": card['name'].capitalize(),
+                        "info": card['info'],
+                        "energies": 0
+                    }
+                    self.bench_pokemon.append(bench_pokemon_info)
+
+        self.log_callback("Current active Pokémon and bench details:")
+        self.log_active_and_bench_pokemon()
+
+    def log_active_and_bench_pokemon(self):
+        # Log active Pokémon details
+        if self.active_pokemon:
+            active = self.active_pokemon[0]
+            active_info = active["info"]
+            #self.log_callback(f"Active Pokémon: {active['name']} - Level: {active_info['level']}, Energies: {active['energies']}, "
+            #                  f"Evolves from: {active_info.get('evolves_from', 'N/A')}, Can Evolve: {'Yes' if active_info.get('can_evolve') else 'No'}")
+        else:
+            self.log_callback("No active Pokémon in play.")
+
+        # Log bench Pokémon details
+        self.log_callback("Bench Pokémon:")
+        for idx, pokemon in enumerate(self.bench_pokemon, start=1):
+            info = pokemon["info"]
+            self.log_callback(f"- Bench Slot {idx}: {pokemon['name']} - Level: {info['level']}, Energies: {pokemon['energies']}, "
+                              f"Evolves from: {info.get('evolves_from', 'N/A')}, Can Evolve: {'Yes' if info.get('can_evolve') else 'No'}")
+
+    def add_energy_to_pokemon(self, pokemon_name, is_active=True):
+        target_list = self.active_pokemon if is_active else self.bench_pokemon
+        for pokemon in target_list:
+            if pokemon["name"].lower() == pokemon_name.lower():
+                pokemon["energies"] += 1
+                self.log_callback(f"Added 1 energy to {pokemon_name}. Total energies: {pokemon['energies']}")
+                return
+        self.log_callback(f"{pokemon_name} not found in {'active' if is_active else 'bench'} Pokémon.")    
 
     def check_turn(self): 
         if not self.running:
@@ -131,7 +178,7 @@ class PokemonBot:
             self.log_callback(f"Checking card {i+1} at position ({x}, {self.card_y})")
 
             zoomed_card_image = self.get_card(x, self.card_y)
-            cv2.imwrite(f"{i}.png",zoomed_card_image)
+            #cv2.imwrite(f"{i}.png",zoomed_card_image)
             card_name = self.identify_card(zoomed_card_image)
             hand_cards.append(card_name.capitalize() if card_name else "Unknown Card")
 
@@ -181,7 +228,7 @@ class PokemonBot:
 
     def get_card(self, x, y, duration=1.0):
         x_zoom_card_region, y_zoom_card_region, w, h = self.zoom_card_region
-        return long_press_position(x, y)[y_zoom_card_region:y_zoom_card_region+h, x_zoom_card_region:x_zoom_card_region+w]
+        return long_press_position(x, y, duration)[y_zoom_card_region:y_zoom_card_region+h, x_zoom_card_region:x_zoom_card_region+w]
 
     def identify_card(self, zoomed_card_image):
         highest_similarity = 0
@@ -197,7 +244,7 @@ class PokemonBot:
         return identified_card
 
     def check_number_of_cards(self, card_x, card_y):
-        long_press_position(card_x, card_y, 2)
+        long_press_position(card_x, card_y, 1.5)
         
         number_image = self.capture_region(self.number_of_cards_region)
         
