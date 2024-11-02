@@ -22,6 +22,11 @@ The Pokemon Pocket Bot is an automation tool designed to streamline gameplay wit
 - **7. Choose the path to the emulator** You have to choose the main folder of the emulator (in the LDPlayer case would be LDPlayer/LDPlayer9)
 - **8. Start botting** You can choose between two modes, Auto Concede to farm fast matches and Start Bot, still WIP.
 
+## LDPlayer Settings:
+<a href="https://tcgpocket.pokemon.com/es-es/"><img src="https://github.com/user-attachments/assets/103033d6-10c2-4d23-bc85-5be2b5b64ce6" alt="Markdownify" width="600"></a>
+<br>
+<a href="https://tcgpocket.pokemon.com/es-es/"><img src="https://github.com/user-attachments/assets/be415ce5-bd80-4276-b4f9-49be8f697ad3" alt="Markdownify" width="600"></a>
+
 ## Key Features:
 
 - **Emulator Path Selection:** Users can easily specify the path to their LDPlayer installation within the bot's interface, facilitating seamless integration with the emulator.
