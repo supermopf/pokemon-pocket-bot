@@ -1,12 +1,15 @@
 import time
-
+import os
+from adb_utils import long_press_position, find_subimage
 from image_utils import ImageProcessor
 
 class BattleActions:
-    def __init__(self, image_processor, template_images, log_callback):
+    def __init__(self, image_processor, template_images, card_images, zoom_card_region, log_callback):
         self.log_callback = log_callback
         self.image_processor = image_processor
         self.template_images = template_images
+        self.card_images = card_images
+        self.zoom_card_region = zoom_card_region
 
     def check_turn(self, turn_check_region, running): 
         if not running:
@@ -43,3 +46,21 @@ class BattleActions:
             time.sleep(2)
             self.image_processor.check_and_click_until_found(self.template_images["CROSS_BUTTON"], "Cross button", running, stop)
             time.sleep(4)
+
+    
+    def get_card(self, x, y, duration=1.0):
+        x_zoom_card_region, y_zoom_card_region, w, h = self.zoom_card_region
+        return long_press_position(x, y, duration)[y_zoom_card_region:y_zoom_card_region+h, x_zoom_card_region:x_zoom_card_region+w]
+
+    def identify_card(self, zoomed_card_image):
+        highest_similarity = 0
+        identified_card = None
+
+        for card_name, template_image in self.card_images.items():
+            base_card_name = os.path.splitext(card_name)[0]
+            _, similarity = find_subimage(zoomed_card_image, template_image)
+            if similarity > 0.8 and similarity > highest_similarity:
+                highest_similarity = similarity
+                identified_card = base_card_name
+
+        return identified_card        

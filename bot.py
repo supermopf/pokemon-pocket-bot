@@ -16,8 +16,8 @@ class PokemonBot:
         self.log_callback = log_callback
         self.running = False
         self.template_images = load_template_images("images")
-        self.image_processor = ImageProcessor(self.log_callback)
-        self.battle_actions = BattleActions(self.image_processor, self.template_images, self.log_callback)
+        self.zoom_card_region = (200, 360, 570, 400)
+        self.card_images = load_all_cards("images/cards")
 
         self.turn_check_region = (50, 1560, 200, 20)
         self.center_x = 540
@@ -25,13 +25,14 @@ class PokemonBot:
         self.card_start_x = 500
         self.card_y = 1500
         self.card_offset_x = 60
-        self.zoom_card_region = (200, 360, 570, 400)
-        self.card_images = load_all_cards("images/cards")
         self.number_of_cards_region = (790, 1325, 60, 50)
         self.deck_info = sandslash_deck
         self.hand_state = []
         self.active_pokemon = []
         self.bench_pokemon = []
+
+        self.image_processor = ImageProcessor(self.log_callback)
+        self.battle_actions = BattleActions(self.image_processor, self.template_images, self.card_images, self.zoom_card_region, self.log_callback)
 
     def start(self):
         if not self.app_state.program_path:
@@ -53,19 +54,19 @@ class PokemonBot:
             screenshot = take_screenshot()
 
             ### GO THROUGH MENUS TO FIND A BATTLE
-            if not self.image_processor.check_and_click(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen"):
-                self.image_processor.check_and_click(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen")
-            time.sleep(1)
-            self.battle_actions.perform_search_battle_actions(self.running, self.stop)
+            #if not self.image_processor.check_and_click(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen"):
+            #    self.image_processor.check_and_click(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen")
+            #time.sleep(1)
+            #self.battle_actions.perform_search_battle_actions(self.running, self.stop)
 
             ### BATTLE START
 
             ## First turn
-            #self.image_processor.check_and_click_until_found(self.template_images["TIME_LIMIT_INDICATOR"], "Time limit indicator", self.running, self.stop)
-            #screenshot = take_screenshot()
-            #if not self.image_processor.check(screenshot, self.template_images["GOING_FIRST_INDICATOR"], "Going first"):
-            #    self.image_processor.check(screenshot, self.template_images["GOING_SECOND_INDICATOR"], "Going second")
-            #self.battle_actions.check_rival_concede(screenshot, self.running, self.stop)
+            self.image_processor.check_and_click_until_found(self.template_images["TIME_LIMIT_INDICATOR"], "Time limit indicator", self.running, self.stop)
+            screenshot = take_screenshot()
+            if not self.image_processor.check(screenshot, self.template_images["GOING_FIRST_INDICATOR"], "Going first"):
+                self.image_processor.check(screenshot, self.template_images["GOING_SECOND_INDICATOR"], "Going second")
+            self.battle_actions.check_rival_concede(screenshot, self.running, self.stop)
             
             number_of_cards = int(self.check_number_of_cards(500, 1500))
             self.check_cards(number_of_cards)
