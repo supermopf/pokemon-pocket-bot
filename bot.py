@@ -2,12 +2,12 @@ import time
 import cv2
 import threading
 import numpy as np
-from adb_utils import connect_to_emulator, click_position, take_screenshot, find_subimage, long_press_position
+from adb_utils import connect_to_emulator, click_position, take_screenshot, find_subimage, long_press_position, drag_position
 from loaders import load_template_images, load_all_cards
 import uuid
 import os
 import easyocr
-
+from deck import sandslash_deck 
 
 class PokemonBot:
     def __init__(self, app_state, log_callback):
@@ -17,6 +17,8 @@ class PokemonBot:
         self.template_images = load_template_images("images")
         
         self.turn_check_region = (50, 1560, 200, 20)
+        self.center_x = 540
+        self.center_y = 960
         self.card_start_x = 500
         self.card_y = 1500
         self.card_offset_x = 60
@@ -24,6 +26,8 @@ class PokemonBot:
         self.card_images = load_all_cards("images/cards")
         self.number_of_cards_region = (790, 1325, 60, 50)
         self.reader = easyocr.Reader(['en'])
+        self.deck_info = sandslash_deck
+        self.hand_state = []
 
     def start(self):
         if not self.app_state.program_path:
@@ -51,16 +55,23 @@ class PokemonBot:
             #self.perform_search_battle_actions()
 
             ### BATTLE START
-            #self.check_and_click_until_found(self.template_images["TIME_LIMIT_INDICATOR"], "Time limit indicator")
-            #screenshot = take_screenshot()
-            #if not self.check(screenshot, self.template_images["GOING_FIRST_INDICATOR"], "Going first"):
-            #    self.check(screenshot, self.template_images["GOING_SECOND_INDICATOR"], "Going second")
+
+            ## First turn
+            self.check_and_click_until_found(self.template_images["TIME_LIMIT_INDICATOR"], "Time limit indicator")
+            screenshot = take_screenshot()
+            if not self.check(screenshot, self.template_images["GOING_FIRST_INDICATOR"], "Going first"):
+                self.check(screenshot, self.template_images["GOING_SECOND_INDICATOR"], "Going second")
+            self.check_rival_concede(screenshot)
             
             number_of_cards = int(self.check_number_of_cards(500, 1500))
             self.check_cards(number_of_cards)
+            screenshot = take_screenshot()
+            self.check_rival_concede(screenshot)
+            self.play_turn()
 
-            if self.check_turn():
-                self.play_turn()
+
+            #if self.check_turn():
+            #    self.play_turn()
 
 
 
@@ -78,6 +89,18 @@ class PokemonBot:
             return False
         # Logic to select and play cards goes here
         self.log_callback("Playing turn actions...")
+        for card in self.hand_state:
+            if card['info']['level'] == 0 and not card['info']['item_card']:
+                start_x = self.card_start_x - (card['position'] * self.card_offset_x)
+
+                # Perform the drag action to play the card on the field
+                self.log_callback(f"Playing card from position {card['position']+1} on the field...")
+                drag_position((start_x, self.card_y), (self.center_x, self.center_y))
+                print(f"Playable card: {card['name']}")
+                print(f"Position: {card['position']}")
+                
+                
+
         # Example: self.check_and_click_until_found(self.template_images["SOME_CARD"], "Card X")
 
     def check_turn(self): 
@@ -100,6 +123,7 @@ class PokemonBot:
         x = self.card_start_x
         num_cards_to_check = number_of_cards
         hand_cards = []
+        self.hand_state.clear()  # Reset hand state at the beginning of each check
 
         for i in range(num_cards_to_check):
             if not self.running:
@@ -107,18 +131,53 @@ class PokemonBot:
             self.log_callback(f"Checking card {i+1} at position ({x}, {self.card_y})")
 
             zoomed_card_image = self.get_card(x, self.card_y)
-            unique_id = str(uuid.uuid4())
-            cv2.imwrite(f"debug_screenshot{unique_id}.png", zoomed_card_image)
+            cv2.imwrite(f"{i}.png",zoomed_card_image)
             card_name = self.identify_card(zoomed_card_image)
-            hand_cards.append(card_name if card_name else "Unknown Card")
+            hand_cards.append(card_name.capitalize() if card_name else "Unknown Card")
 
-            if num_cards_to_check <= 5:
+            card_info = self.deck_info.get(card_name, {
+                "level": "N/A", 
+                "energies": "N/A", 
+                "evolves_from": "N/A", 
+                "can_evolve": "Unknown", 
+                "item_card": False
+            })
+            
+            card_info_with_position = {
+                "name": card_name,
+                "info": card_info,
+                "position": i
+            }
+            self.hand_state.append(card_info_with_position)
+
+            if num_cards_to_check == 5:
                 x -= self.card_offset_x
+            elif num_cards_to_check >= 4:
+                x -= 80   
             else:
-                x -= 40    
+                x -= 40
+
+        # Log hand details
         hand_description = ', '.join(hand_cards)
-        self.log_callback(f"Your hand contains:")
-        self.log_callback(f"{hand_description}")
+        self.log_callback(f"Your hand contains: {hand_description}")
+        self.log_callback("Detailed hand information:")
+
+        for card in self.hand_state:
+            card_name = card["name"]
+            card_info = card["info"]
+            position = card["position"]
+            
+            # Extract and format attributes
+            level = card_info.get("level", "N/A")
+            energies = card_info.get("energies", "N/A")
+            evolves_from = card_info.get("evolves_from", "N/A")
+            can_evolve = "Yes" if card_info.get("can_evolve", False) else "No"
+            item_card = "Item Card" if card_info.get("item_card", False) else "Not an Item Card"
+
+            # Log detailed information for each card with position
+            self.log_callback(f"- Position {position}: {card_name} - Level {level}, Energies: {energies}, "
+                            f"Evolves from: {evolves_from}, Can Evolve: {can_evolve}, {item_card}")
+
 
     def get_card(self, x, y, duration=1.0):
         x_zoom_card_region, y_zoom_card_region, w, h = self.zoom_card_region
@@ -138,7 +197,7 @@ class PokemonBot:
         return identified_card
 
     def check_number_of_cards(self, card_x, card_y):
-        long_press_position(card_x, card_y, 4)
+        long_press_position(card_x, card_y, 2)
         
         number_image = self.capture_region(self.number_of_cards_region)
         
@@ -146,6 +205,18 @@ class PokemonBot:
         self.log_callback(f"Number of cards: {number}")
         
         return number
+    
+    def check_rival_concede(self, screenshot):
+        if self.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Rival conceded"):
+            for key in [
+                "NEXT_BUTTON",
+                "THANKS_BUTTON",
+            ]:
+                if not self.check_and_click_until_found(self.template_images[key], f"{key.replace('_', ' ').title()}"):
+                    break
+            time.sleep(2)
+            self.check_and_click_until_found(self.template_images["CROSS_BUTTON"], "Cross button")
+            time.sleep(4)
 
     def capture_region(self, region):
         x, y, w, h = region

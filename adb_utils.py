@@ -39,3 +39,16 @@ def long_press_position(x, y, duration=1.0):
     screenshot_thread.join()
 
     return screenshot
+
+def drag_position(start_pos, end_pos, duration=0.5):
+    start_x, start_y = start_pos
+    end_x, end_y = end_pos
+    
+    duration_ms = int(duration * 500)
+    
+    subprocess.run([
+        "adb", "shell", "input", "swipe",
+        str(start_x), str(start_y),
+        str(end_x), str(end_y),
+        str(duration_ms)
+    ])
