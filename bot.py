@@ -177,6 +177,7 @@ class PokemonBot:
             return False
         for pokemon in self.active_pokemon:
             drag_position((750,1450), (self.center_x, self.center_y), 0.3)
+            time.sleep(1)
             if pokemon.get('energies'):
                 pokemon["energies"] += 1
                 self.log_callback(f"Added 1 energy to {pokemon['name']}. Total energies: {pokemon['energies']}")
