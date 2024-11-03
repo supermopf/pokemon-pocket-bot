@@ -311,6 +311,9 @@ class PokemonBot:
         self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
 
     def try_attack(self):
+        if not self.running:
+            return False
+        self.add_energy_to_pokemon()
         time.sleep(1)
         self.reset_view()
         click_position(self.center_x, self.center_y)
@@ -318,6 +321,21 @@ class PokemonBot:
         click_position(540, 1250)
         screenshot = take_screenshot()
         time.sleep(0.5)
+        self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
+        self.image_processor.check_and_click(screenshot, self.template_images["OK_2"], "Ok")
+        self.image_processor.check_and_click(screenshot, self.template_images["OK_3"], "Ok")
+        screenshot = take_screenshot()
+        time.sleep(0.25)
+        self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
+        self.image_processor.check_and_click(screenshot, self.template_images["OK_2"], "Ok")
+        self.image_processor.check_and_click(screenshot, self.template_images["OK_3"], "Ok")
+        screenshot = take_screenshot()
+        time.sleep(0.25)
+        self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
+        self.image_processor.check_and_click(screenshot, self.template_images["OK_2"], "Ok")
+        self.image_processor.check_and_click(screenshot, self.template_images["OK_3"], "Ok")
+        screenshot = take_screenshot()
+        time.sleep(0.25)
         self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
         self.image_processor.check_and_click(screenshot, self.template_images["OK_2"], "Ok")
         self.image_processor.check_and_click(screenshot, self.template_images["OK_3"], "Ok")
