@@ -105,7 +105,8 @@ These are the key milestones for the current and future versions of the bot:
 - [ ] Track and calculate attack power for each Pokémon
 - [ ] Monitor health of the main Pokémon
 - [ ] Implement a priority queue to select the optimal Pokémon for play
-
+- [ ] Read decks from txt files
+ 
 This checklist can be updated over time as more features are added and improved, ensuring steady progress toward full automation and strategic gameplay.
 
 ## Target Audience:
