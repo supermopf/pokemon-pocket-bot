@@ -10,6 +10,7 @@
 
 The Pokemon Pocket Bot is an automation tool designed to streamline gameplay within the "Pokemon Pocket" game. Tailored specifically for LDPlayer, an Android emulator, this bot simplifies repetitive tasks by automating gameplay actions, allowing users to focus on strategic decisions and progression.
 
+![Animation](https://github.com/user-attachments/assets/366c8543-0558-4e4b-99dc-a1f4ed3476ef)
 
 ## Usage:
 
