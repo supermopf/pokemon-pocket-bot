@@ -37,6 +37,7 @@ class BattleActions:
                 break
 
     def check_rival_concede(self, screenshot, running, stop):
+        self.log_callback(f"Checking if the rival conceded...")
         if self.image_processor.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Rival conceded"):
             for key in [
                 "NEXT_BUTTON",
@@ -47,6 +48,8 @@ class BattleActions:
             time.sleep(2)
             self.image_processor.check_and_click_until_found(self.template_images["CROSS_BUTTON"], "Cross button", running, stop)
             time.sleep(4)
+        else:
+            self.log_callback(f"Rival hasn't conceded")    
     
     def get_card(self, x, y, duration=1.0):
         x_zoom_card_region, y_zoom_card_region, w, h = self.zoom_card_region
@@ -66,7 +69,8 @@ class BattleActions:
         return identified_card
     
     def check_number_of_cards(self, card_x, card_y):
-        long_press_position(card_x, card_y, 2)
+        self.log_callback(f"Checking the number of cards...")
+        long_press_position(card_x, card_y, 1.5)
         
         number_image = self.image_processor.capture_region(self.number_of_cards_region)
         
@@ -74,16 +78,3 @@ class BattleActions:
         self.log_callback(f"Number of cards: {number}")
         
         return number
-    
-    def identify_card(self, zoomed_card_image):
-        highest_similarity = 0
-        identified_card = None
-
-        for card_name, template_image in self.card_images.items():
-            base_card_name = os.path.splitext(card_name)[0]
-            _, similarity = find_subimage(zoomed_card_image, template_image)
-            if similarity > 0.8 and similarity > highest_similarity:
-                highest_similarity = similarity
-                identified_card = base_card_name
-
-        return identified_card
