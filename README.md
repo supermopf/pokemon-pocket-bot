@@ -1,14 +1,14 @@
 <h1 align="center">
   <br>
-  <a href="https://tcgpocket.pokemon.com/es-es/"><img src="https://github.com/user-attachments/assets/141d27c3-d965-4bb9-ab02-2d61af431aef" alt="Markdownify" width="200"></a>
+  <a href="https://tcgpocket.Pokémon.com/es-es/"><img src="https://github.com/user-attachments/assets/141d27c3-d965-4bb9-ab02-2d61af431aef" alt="Markdownify" width="200"></a>
   <br>
-  Pokemon Pocket Bot ⚔️
+  Pokémon Pocket Bot ⚔️
   <br>
 </h1>
 
 ## Description:
 
-The Pokemon Pocket Bot is an automation tool designed to streamline gameplay within the "Pokemon Pocket" game. Tailored specifically for LDPlayer, an Android emulator, this bot simplifies repetitive tasks by automating gameplay actions, allowing users to focus on strategic decisions and progression.
+The Pokémon Pocket Bot is an automation tool designed to streamline gameplay within the "Pokémon Pocket" game. Tailored specifically for LDPlayer, an Android emulator, this bot simplifies repetitive tasks by automating gameplay actions, allowing users to focus on strategic decisions and progression.
 
 
 ## Usage:
@@ -18,14 +18,14 @@ The Pokemon Pocket Bot is an automation tool designed to streamline gameplay wit
 - **3. Choose the resolution to be 1600x900 (dpi 240)**
 - **4. Install the requirements**: pip install -r requirements.txt
 - **5. Start the bot**: python app.py
-- **6. Start Pokemon Pocket**
+- **6. Start Pokémon Pocket**
 - **7. Choose the path to the emulator** You have to choose the main folder of the emulator (in the LDPlayer case would be LDPlayer/LDPlayer9)
 - **8. Start botting** You can choose between two modes, Auto Concede to farm fast matches and Start Bot, still WIP.
 
 ## LDPlayer Settings:
-<a href="https://tcgpocket.pokemon.com/es-es/"><img src="https://github.com/user-attachments/assets/103033d6-10c2-4d23-bc85-5be2b5b64ce6" alt="Markdownify" width="600"></a>
+<a href="https://tcgpocket.Pokémon.com/es-es/"><img src="https://github.com/user-attachments/assets/103033d6-10c2-4d23-bc85-5be2b5b64ce6" alt="Markdownify" width="600"></a>
 <br>
-<a href="https://tcgpocket.pokemon.com/es-es/"><img src="https://github.com/user-attachments/assets/be415ce5-bd80-4276-b4f9-49be8f697ad3" alt="Markdownify" width="600"></a>
+<a href="https://tcgpocket.Pokémon.com/es-es/"><img src="https://github.com/user-attachments/assets/be415ce5-bd80-4276-b4f9-49be8f697ad3" alt="Markdownify" width="600"></a>
 
 ## Deck Configuration
 
@@ -111,8 +111,8 @@ This checklist can be updated over time as more features are added and improved,
 
 ## Target Audience:
 
-- **Gamers:** Pokemon Pocket players seeking to streamline gameplay and optimize resource management.
+- **Gamers:** Pokémon Pocket players seeking to streamline gameplay and optimize resource management.
   
 - **LDPlayer Users:** Users of the LDPlayer Android emulator looking to enhance their gaming experience through automation.
 
-Overall, the Pokemon Pocket Bot offers a powerful yet user-friendly solution for automating gameplay tasks within the Pokemon Pocket game, providing players with greater efficiency, optimization, and convenience in their gaming journey.
+Overall, the Pokémon Pocket Bot offers a powerful yet user-friendly solution for automating gameplay tasks within the Pokémon Pocket game, providing players with greater efficiency, optimization, and convenience in their gaming journey.
