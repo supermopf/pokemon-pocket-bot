@@ -56,7 +56,6 @@ class ImageProcessor:
                 self.log_callback(f"{log_message} not found. Attempt {attempts}/{max_attempts}.")
                 if attempts >= max_attempts:
                     self.log_callback("Max attempts reached. Stopping the bot.")
-                    stop()
                     return False
                 time.sleep(0.5)
 
