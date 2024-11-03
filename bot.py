@@ -67,7 +67,7 @@ class PokemonBot:
             self.image_processor.check_and_click_until_found(self.template_images["TIME_LIMIT_INDICATOR"], "Time limit indicator", self.running, self.stop)
             screenshot = take_screenshot()
 
-            while not self.image_processor.check_and_click(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended") and (not self.image_processor.check_and_click(screenshot, self.template_images["NEXT_BUTTON"], "Next button") and not (self.image_processor.check_and_click(screenshot, self.template_images["THANKS_BUTTON"], "Thanks button")) and not (self.image_processor.check_and_click(screenshot, self.template_images["BATTLE_BUTTON"], "Battle button")) and not self.image_processor.check_and_click(screenshot, self.template_images["CROSS_BUTTON"], "Cross button")):
+            while not self.image_processor.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended") and (not self.image_processor.check(screenshot, self.template_images["NEXT_BUTTON"], "Next button") and not (self.image_processor.check(screenshot, self.template_images["THANKS_BUTTON"], "Thanks button")) and not (self.image_processor.check(screenshot, self.template_images["BATTLE_BUTTON"], "Battle button")) and not self.image_processor.check(screenshot, self.template_images["CROSS_BUTTON"], "Cross button")):
                 ## Case got a pokemon defeated or sabrina card
                 self.click_bench_pokemons()
 
