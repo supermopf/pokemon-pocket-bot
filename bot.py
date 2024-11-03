@@ -55,6 +55,8 @@ class PokemonBot:
 
     def run_script(self):
         while self.running:
+            self.active_pokemon = []
+            self.bench_pokemon = []
             screenshot = take_screenshot()
 
             ### GO THROUGH MENUS TO FIND A BATTLE
@@ -71,12 +73,12 @@ class PokemonBot:
                 ## Case got a pokemon defeated or sabrina card
                 self.click_bench_pokemons()
 
-                if self.battle_actions.check_turn(self.turn_check_region, self.running):
+                if self.battle_actions.check_turn(self.turn_check_region, self.running) or not self.active_pokemon:
                     time.sleep(1)
                     self.update_field_and_hand_cards()
                     self.play_turn()
                     self.end_turn()
-
+                    
                 screenshot = take_screenshot()
 
             ### GO TO MAIN SCREEN
@@ -128,20 +130,23 @@ class PokemonBot:
         ## Check if i can attach an energy to the main card
         self.log_callback(f"Trying to attach an energy...")
         self.add_energy_to_pokemon()
-
+        if not self.running:
+            return False
         ## Check if i can attack
+        time.sleep(1)
         self.reset_view()
-        time.sleep(3)
-        self.reset_view()
-        click_position(self.center_x, self.center_y)
         click_position(self.center_x, self.center_y)
         time.sleep(0.75)
         click_position(540, 1250)
         screenshot = take_screenshot()
+        time.sleep(0.5)
         self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
+        self.image_processor.check_and_click(screenshot, self.template_images["OK_2"], "Ok")
+        self.image_processor.check_and_click(screenshot, self.template_images["OK_3"], "Ok")
 
         #self.update_field_and_hand_cards()
-
+        if not self.running:
+            return False
         ## Check if i can evolve the main pokemon
         for card in self.hand_state:
             if card['info'].get('evolves_from') and self.active_pokemon:
@@ -286,11 +291,15 @@ class PokemonBot:
         click_position(0,1350)
 
     def check_n_cards(self):
+        if not self.running:
+            return False
         n_cards = self.battle_actions.check_number_of_cards(500, 1500)
         if n_cards:
             self.number_of_cards = int(n_cards)
 
     def update_field_and_hand_cards(self):
+        if not self.running:
+            return False
         self.click_bench_pokemons()
         self.check_n_cards()
         self.click_bench_pokemons()
@@ -299,6 +308,8 @@ class PokemonBot:
         self.check_field()
 
     def end_turn(self):
+        if not self.running:
+            return False
         self.reset_view()
         time.sleep(0.5)
         screenshot = take_screenshot()
