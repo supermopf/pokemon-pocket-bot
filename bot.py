@@ -131,7 +131,8 @@ class PokemonBot:
 
         ## Check if i can attack
         self.reset_view()
-        time.sleep(1)
+        time.sleep(3)
+        self.reset_view()
         click_position(self.center_x, self.center_y)
         click_position(self.center_x, self.center_y)
         time.sleep(0.75)
@@ -140,7 +141,7 @@ class PokemonBot:
 
         #self.update_field_and_hand_cards()
 
-        ## Check if i can evolve the main card or play a trainer card
+        ## Check if i can evolve the main pokemon
         for card in self.hand_state:
             if card['info'].get('evolves_from') and self.active_pokemon:
                 if card['info']['evolves_from'].lower() == self.active_pokemon[0]['name'].lower():
@@ -158,7 +159,10 @@ class PokemonBot:
                     time.sleep(1)
                     self.hand_state.remove(card)
                     self.number_of_cards -= 1
-            elif card['info'].get('item_card'):
+
+         ## Check if i can play a trainer card            
+        for card in self.hand_state:
+            if card['info'].get('item_card'):
                 card_offset_x = card_offset_mapping.get(self.number_of_cards, 20)
                 start_x = self.card_start_x - (card['position'] * card_offset_x)
                 
