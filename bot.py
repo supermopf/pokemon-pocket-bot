@@ -77,8 +77,9 @@ class PokemonBot:
                     time.sleep(1)
                     self.update_field_and_hand_cards()
                     self.play_turn()
+                    self.try_attack()
                     self.end_turn()
-                    
+
                 screenshot = take_screenshot()
 
             ### GO TO MAIN SCREEN
@@ -127,22 +128,14 @@ class PokemonBot:
             self.reset_view()
         time.sleep(0.5)
 
+        self.try_attack()
         ## Check if i can attach an energy to the main card
         self.log_callback(f"Trying to attach an energy...")
         self.add_energy_to_pokemon()
         if not self.running:
             return False
         ## Check if i can attack
-        time.sleep(1)
-        self.reset_view()
-        click_position(self.center_x, self.center_y)
-        time.sleep(0.75)
-        click_position(540, 1250)
-        screenshot = take_screenshot()
-        time.sleep(0.5)
-        self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
-        self.image_processor.check_and_click(screenshot, self.template_images["OK_2"], "Ok")
-        self.image_processor.check_and_click(screenshot, self.template_images["OK_3"], "Ok")
+        self.try_attack()
 
         #self.update_field_and_hand_cards()
         if not self.running:
@@ -316,3 +309,16 @@ class PokemonBot:
         self.image_processor.check_and_click(screenshot, self.template_images["END_TURN"], "End turn")
         time.sleep(0.5)
         self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
+
+    def try_attack(self):
+        time.sleep(1)
+        self.reset_view()
+        click_position(self.center_x, self.center_y)
+        time.sleep(0.75)
+        click_position(540, 1250)
+        screenshot = take_screenshot()
+        time.sleep(0.5)
+        self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
+        self.image_processor.check_and_click(screenshot, self.template_images["OK_2"], "Ok")
+        self.image_processor.check_and_click(screenshot, self.template_images["OK_3"], "Ok")
+        self.reset_view()
