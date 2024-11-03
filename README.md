@@ -70,7 +70,9 @@ If you want to use cards that aren’t currently available in the `images/cards`
 
 - **Emulator Path Selection:** Users can easily specify the path to their LDPlayer installation within the bot's interface, facilitating seamless integration with the emulator.
   
-- **Play Random Matches:** With automated matches functionality, the bot plays random matches to farm store tickets.
+- **Play Random Matches:** With automated matches functionality, the bot plays random matches to farm store tickets and 15 exp.
+
+- **Concede Random Matches:** With automated matches functionality, the bot concedes random matches to farm store tickets.
 
 ## Benefits:
 
