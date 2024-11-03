@@ -137,6 +137,7 @@ class PokemonBot:
         click_position(self.center_x, self.center_y)
         time.sleep(0.75)
         click_position(540, 1250)
+        screenshot = take_screenshot()
         self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
 
         #self.update_field_and_hand_cards()
