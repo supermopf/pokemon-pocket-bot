@@ -69,7 +69,7 @@ class PokemonBot:
             self.image_processor.check_and_click_until_found(self.template_images["TIME_LIMIT_INDICATOR"], "Time limit indicator", self.running, self.stop)
             screenshot = take_screenshot()
 
-            while not self.image_processor.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended") and (not self.image_processor.check(screenshot, self.template_images["NEXT_BUTTON"], "Next button") and not (self.image_processor.check(screenshot, self.template_images["THANKS_BUTTON"], "Thanks button")) and not (self.image_processor.check(screenshot, self.template_images["BATTLE_BUTTON"], "Battle button")) and not self.image_processor.check(screenshot, self.template_images["CROSS_BUTTON"], "Cross button")):
+            while not self.image_processor.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended") and (not self.image_processor.check(screenshot, self.template_images["NEXT_BUTTON"], "Next button") and not (self.image_processor.check(screenshot, self.template_images["THANKS_BUTTON"], "Thanks button")) and not (self.image_processor.check(screenshot, self.template_images["BATTLE_BUTTON"], "Battle button")) and not self.image_processor.check(screenshot, self.template_images["CROSS_BUTTON"], "Cross button") and not self.image_processor.check(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen") and not self.image_processor.check(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen")):
                 ## Case got a pokemon defeated or sabrina card
                 self.click_bench_pokemons()
 
@@ -91,7 +91,7 @@ class PokemonBot:
             if self.image_processor.check_and_click(screenshot, self.template_images["NEXT_BUTTON"], "Next button"):
                 time.sleep(1)
             if self.image_processor.check_and_click(screenshot, self.template_images["THANKS_BUTTON"], "Thanks button"):
-                time.sleep(1)
+                time.sleep(2)
             self.image_processor.check_and_click(screenshot, self.template_images["CROSS_BUTTON"], "Cross button")
 
 
@@ -182,7 +182,7 @@ class PokemonBot:
                 pokemon["energies"] += 1
                 self.log_callback(f"Added 1 energy to {pokemon['name']}. Total energies: {pokemon['energies']}")
     
-    def check_cards(self):
+    def check_cards(self, debug_images=False):
         if not self.running:
             return False
         self.log_callback(f"Start checking hand cards...")
@@ -196,7 +196,9 @@ class PokemonBot:
             self.log_callback(f"Checking card {i+1} at position ({x}, {self.card_y})")
 
             zoomed_card_image = self.battle_actions.get_card(x, self.card_y)
-            #cv2.imwrite(f"{i}.png",zoomed_card_image)
+            if debug_images:
+                unique_id = str(uuid.uuid4())  # Convert UUID to string
+                cv2.imwrite(f"{unique_id}.png",zoomed_card_image)
             card_name = self.battle_actions.identify_card(zoomed_card_image)
             hand_cards.append(card_name.capitalize() if card_name else "Unknown Card")
 
@@ -297,7 +299,7 @@ class PokemonBot:
         self.click_bench_pokemons()
         self.check_n_cards()
         self.click_bench_pokemons()
-        self.check_cards()
+        self.check_cards(False)
         self.click_bench_pokemons()
         self.check_field()
 

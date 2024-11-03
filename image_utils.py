@@ -42,7 +42,7 @@ class ImageProcessor:
     def check_and_click_until_found(self, template_image, log_message, running, stop, similarity_threshold=0.8, timeout=30):
         attempts = 0
         max_attempts = 50
-
+        
         while running:
             screenshot = take_screenshot()
             position, similarity = find_subimage(screenshot, template_image)
