@@ -4,6 +4,23 @@
   <br>
   Pokemon Pocket Bot ⚔️
   <br>
+  <h4 align="center">A computer vision bot made with <a href="https://opencv.org/" target="_blank">OpenCV</a> and <a href="https://developer.android.com/studio/command-line/adb" target="_blank">ADB</a>.</h4>
+
+<p align="center">
+  <a href="www.python.org">
+    <img src="https://badgen.net/badge/python/3.12/pink?icon=terminal"
+         alt="Python">
+  </a>
+  <a href="https://img.shields.io/github/repo-size/AdriaGual/pokemon-pocket-bot">
+    <img src="https://img.shields.io/github/repo-size/AdriaGual/pokemon-pocket-bot">
+  </a>
+  <a href="https://pypi.org/">
+      <img src="https://img.shields.io/pypi/v/nine">
+  </a>
+  <a href="https://opensource.org/licenses/MIT">
+    <img src="https://badgen.net/pypi/license/pip">
+  </a>
+</p>
 </h1>
 
 ## Description:
