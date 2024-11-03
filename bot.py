@@ -58,28 +58,38 @@ class PokemonBot:
             screenshot = take_screenshot()
 
             ### GO THROUGH MENUS TO FIND A BATTLE
-            #if not self.image_processor.check_and_click(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen"):
-            #    self.image_processor.check_and_click(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen")
-            #time.sleep(1)
-            #self.battle_actions.perform_search_battle_actions(self.running, self.stop)
+            if not self.image_processor.check_and_click(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen"):
+                self.image_processor.check_and_click(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen")
+            time.sleep(1)
+            self.battle_actions.perform_search_battle_actions(screenshot, self.running, self.stop)
 
             ### BATTLE START
+            self.image_processor.check_and_click_until_found(self.template_images["TIME_LIMIT_INDICATOR"], "Time limit indicator", self.running, self.stop)
+            screenshot = take_screenshot()
 
-            ## First turn
-            #self.image_processor.check_and_click_until_found(self.template_images["TIME_LIMIT_INDICATOR"], "Time limit indicator", self.running, self.stop)
-            #screenshot = take_screenshot()
-            #if not self.image_processor.check(screenshot, self.template_images["GOING_FIRST_INDICATOR"], "Going first"):
-            #    self.image_processor.check(screenshot, self.template_images["GOING_SECOND_INDICATOR"], "Going second")
-            #self.battle_actions.check_rival_concede(screenshot, self.running, self.stop)
-            self.update_field_and_hand_cards()
-            self.battle_actions.check_rival_concede(screenshot, self.running, self.stop)
-            self.play_turn()
+            while not self.image_processor.check_and_click(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended") and (not self.image_processor.check_and_click(screenshot, self.template_images["NEXT_BUTTON"], "Next button") and not (self.image_processor.check_and_click(screenshot, self.template_images["THANKS_BUTTON"], "Thanks button")) and not (self.image_processor.check_and_click(screenshot, self.template_images["BATTLE_BUTTON"], "Battle button")) and not self.image_processor.check_and_click(screenshot, self.template_images["CROSS_BUTTON"], "Cross button")):
+                ## Case got a pokemon defeated or sabrina card
+                self.click_bench_pokemons()
 
-            ## Case I got a pokemon defeated
-            self.click_bench_pokemons()
+                if self.battle_actions.check_turn(self.turn_check_region, self.running):
+                    time.sleep(1)
+                    self.update_field_and_hand_cards()
+                    self.play_turn()
+                    self.end_turn()
 
-            #if self.battle_actions.check_turn(self.turn_check_region, self.running):
-            #    self.play_turn()
+                screenshot = take_screenshot()
+
+            ### GO TO MAIN SCREEN
+            time.sleep(1)
+            if self.image_processor.check_and_click(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended"):
+                time.sleep(1)
+            if self.image_processor.check_and_click(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended"):
+                time.sleep(1)
+            if self.image_processor.check_and_click(screenshot, self.template_images["NEXT_BUTTON"], "Next button"):
+                time.sleep(1)
+            if self.image_processor.check_and_click(screenshot, self.template_images["THANKS_BUTTON"], "Thanks button"):
+                time.sleep(1)
+            self.image_processor.check_and_click(screenshot, self.template_images["CROSS_BUTTON"], "Cross button")
 
 
     def play_turn(self):
@@ -101,8 +111,7 @@ class PokemonBot:
                         self.reset_view()
                         time.sleep(0.5)
                         self.log_callback(f"Playing card from position {card['position']+1} to bench {bench_position}...")
-                        drag_position((start_x, self.card_y), bench_position, 1)
-                        time.sleep(2)
+                        drag_position((start_x, self.card_y), bench_position, 1.5)
 
                     bench_pokemon_info = {
                         "name": card['name'].capitalize(),
@@ -118,11 +127,20 @@ class PokemonBot:
 
         ## Check if i can attach an energy to the main card
         self.log_callback(f"Trying to attach an energy...")
-        drag_position((750,1450), (self.center_x, self.center_y), 0.3)
+        self.add_energy_to_pokemon()
+
+        ## Check if i can attack
+        self.reset_view()
+        time.sleep(1)
+        click_position(self.center_x, self.center_y)
+        click_position(self.center_x, self.center_y)
+        time.sleep(0.75)
+        click_position(540, 1250)
+        self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
 
         #self.update_field_and_hand_cards()
 
-        ## Check if i can evolve the main card
+        ## Check if i can evolve the main card or play a trainer card
         for card in self.hand_state:
             if card['info'].get('evolves_from') and self.active_pokemon:
                 if card['info']['evolves_from'].lower() == self.active_pokemon[0]['name'].lower():
@@ -138,42 +156,27 @@ class PokemonBot:
                         "energies": self.active_pokemon[0].get("energies", 0)
                     }
                     time.sleep(1)
-                    break
-
-        #self.update_field_and_hand_cards()
-
-        ## Check if i can play a trainer card
-        for card in self.hand_state:
-            # Check if the card is a trainer card (item card)
-            if card['info'].get('item_card'):
-                # Calculate the position to drag from
+                    self.hand_state.remove(card)
+                    self.number_of_cards -= 1
+            elif card['info'].get('item_card'):
                 card_offset_x = card_offset_mapping.get(self.number_of_cards, 20)
                 start_x = self.card_start_x - (card['position'] * card_offset_x)
                 
-                # Log the action and perform drag
                 self.log_callback(f"Playing trainer card: {card['name']}...")
                 drag_position((start_x, self.card_y), (self.center_x, self.center_y))
                 
-                # Pause briefly after playing the trainer card
                 time.sleep(1)
-                
-                # Trainer cards are usually single-use, so we might want to remove them from hand
                 self.hand_state.remove(card)
-                break 
+                self.number_of_cards -= 1
 
-        ## Check if i can attack
-
-
-    def add_energy_to_pokemon(self, pokemon_name, is_active=True):
+    def add_energy_to_pokemon(self):
         if not self.running:
             return False
-        target_list = self.active_pokemon if is_active else self.bench_pokemon
-        for pokemon in target_list:
-            if pokemon["name"].lower() == pokemon_name.lower():
+        for pokemon in self.active_pokemon:
+            drag_position((750,1450), (self.center_x, self.center_y), 0.3)
+            if pokemon.get('energies'):
                 pokemon["energies"] += 1
-                self.log_callback(f"Added 1 energy to {pokemon_name}. Total energies: {pokemon['energies']}")
-                return
-        self.log_callback(f"{pokemon_name} not found in {'active' if is_active else 'bench'} Pokémon.")    
+                self.log_callback(f"Added 1 energy to {pokemon['name']}. Total energies: {pokemon['energies']}")
     
     def check_cards(self):
         if not self.running:
@@ -213,13 +216,6 @@ class PokemonBot:
             card_info = card["info"]
             position = card["position"]
             
-            # Extract and format attributes
-            level = card_info.get("level", "N/A")
-            energies = card_info.get("energies", "N/A")
-            evolves_from = card_info.get("evolves_from", "N/A")
-            can_evolve = "Yes" if card_info.get("can_evolve", False) else "No"
-            item_card = "Item Card" if card_info.get("item_card", False) else "Not an Item Card"
-
             # Log detailed information for each card with position
             self.log_callback(f"- Position {position}: {card_name}")
 
@@ -290,6 +286,17 @@ class PokemonBot:
             self.number_of_cards = int(n_cards)
 
     def update_field_and_hand_cards(self):
+        self.click_bench_pokemons()
         self.check_n_cards()
+        self.click_bench_pokemons()
         self.check_cards()
-        self.check_field()       
+        self.click_bench_pokemons()
+        self.check_field()
+
+    def end_turn(self):
+        self.reset_view()
+        time.sleep(0.5)
+        screenshot = take_screenshot()
+        self.image_processor.check_and_click(screenshot, self.template_images["END_TURN"], "End turn")
+        time.sleep(0.5)
+        self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")

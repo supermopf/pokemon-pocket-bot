@@ -13,10 +13,11 @@ class BattleActions:
         self.number_of_cards_region = number_of_cards_region
 
     def check_turn(self, turn_check_region, running): 
+        self.log_callback("Checking turn...")
         if not running:
             return False
         screenshot1 = self.image_processor.capture_region(turn_check_region)
-        time.sleep(1)
+        time.sleep(1.5)
         screenshot2 = self.image_processor.capture_region(turn_check_region)
 
         similarity = self.image_processor.calculate_similarity(screenshot1, screenshot2)
@@ -27,7 +28,7 @@ class BattleActions:
 
         return similarity < 0.95
     
-    def perform_search_battle_actions(self, running, stop):
+    def perform_search_battle_actions(self, screenshot, running, stop):
         for key in [
             "VERSUS_SCREEN",
             "RANDOM_MATCH_SCREEN",

@@ -40,9 +40,8 @@ class ImageProcessor:
         return similarity > similarity_threshold
     
     def check_and_click_until_found(self, template_image, log_message, running, stop, similarity_threshold=0.8, timeout=30):
-        start_time = time.time()
         attempts = 0
-        max_attempts = 10
+        max_attempts = 50
 
         while running:
             screenshot = take_screenshot()
@@ -52,14 +51,13 @@ class ImageProcessor:
             if similarity > similarity_threshold:
                 self.log_and_click(position, f"{log_message} found - {similarity:.2f}")
                 return True
-            elif time.time() - start_time > timeout:
+            elif similarity < similarity_threshold:
                 attempts += 1
-                self.log_callback(f"{log_message} not found within timeout. Attempt {attempts}/{max_attempts}.")
+                self.log_callback(f"{log_message} not found. Attempt {attempts}/{max_attempts}.")
                 if attempts >= max_attempts:
                     self.log_callback("Max attempts reached. Stopping the bot.")
                     stop()
-                return False
-            else:
+                    return False
                 time.sleep(0.5)
 
     def check_and_click(self, screenshot, template_image, log_message, similarity_threshold=0.8):
