@@ -34,7 +34,7 @@ class BattleActions:
             "RANDOM_MATCH_SCREEN",
             "BATTLE_BUTTON",
         ]:
-            if not self.image_processor.check_and_click_until_found(self.template_images[key], f"{key.replace('_', ' ').title()}", running, stop):
+            if not self.image_processor.check_and_click_until_found(self.template_images[key], f"{key.replace('_', ' ').title()}", running, stop, max_attempts=10):
                 break
 
     def check_rival_concede(self, screenshot, running, stop):

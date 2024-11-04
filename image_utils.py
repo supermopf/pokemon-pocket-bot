@@ -39,9 +39,8 @@ class ImageProcessor:
         self.log_callback(log_message)
         return similarity > similarity_threshold
     
-    def check_and_click_until_found(self, template_image, log_message, running, stop, similarity_threshold=0.8, timeout=30):
+    def check_and_click_until_found(self, template_image, log_message, running, stop, similarity_threshold=0.8, max_attempts=50):
         attempts = 0
-        max_attempts = 50
         
         while running:
             screenshot = take_screenshot()
