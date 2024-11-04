@@ -217,7 +217,10 @@ class PokemonBot:
         for i in range(self.number_of_cards):
             if not self.running:
                 break
+            self.add_energy_to_pokemon()
+            self.try_attack()
             self.reset_view()
+
             self.log_callback(f"Checking card {i+1} at position ({x}, {self.card_y})")
 
             zoomed_card_image = self.battle_actions.get_card(x, self.card_y)
@@ -338,7 +341,7 @@ class PokemonBot:
     def update_field_and_hand_cards(self):
         if not self.running:
             return False
-        self.reset_view()
+        self.click_bench_pokemons()
         self.check_n_cards()
         self.reset_view()
         self.check_cards(False)
@@ -372,6 +375,8 @@ class PokemonBot:
         click_position(self.center_x, self.center_y)
         time.sleep(0.25)
         click_position(540, 1250)
+        click_position(540, 1150)
+        click_position(540, 1050)
         screenshot = take_screenshot()
         time.sleep(0.25)
         self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
