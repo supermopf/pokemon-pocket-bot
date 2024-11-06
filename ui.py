@@ -21,7 +21,7 @@ class BotUI:
         self.load_configs()
 
     def setup_ui(self):
-        self.root.geometry("400x650")
+        self.root.geometry("450x650")
         tk.Label(self.root, text="Pokemon Pocket Bot ⚔️", font=("Helvetica", 16, "bold")).pack(pady=10)
 
         select_path_frame = tk.Frame(self.root)
