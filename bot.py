@@ -24,8 +24,8 @@ class PokemonBot:
         ## COORDS
         self.zoom_card_region = (200, 360, 570, 400)
         self.turn_check_region = (50, 1560, 200, 20)
-        self.center_x = 500
-        self.center_y = 960
+        self.center_x = 400
+        self.center_y = 900
         self.card_start_x = 500
         self.card_y = 1500
         self.number_of_cards_region = (790, 1325, 60, 50)
@@ -190,6 +190,7 @@ class PokemonBot:
 
             screenshot = take_screenshot()
             if self.image_processor.check_and_click(screenshot, self.template_images["START_BATTLE_BUTTON"], "Start battle button"):
+                time.sleep(0.5)
                 break
             self.reset_view()
         time.sleep(0.5)
@@ -317,6 +318,7 @@ class PokemonBot:
                 "energies": 0
             }
             self.active_pokemon.append(card_info)
+            self.log_callback(f"Active pokemon: {self.active_pokemon}")
         else:
             self.active_pokemon = []
     
@@ -405,4 +407,7 @@ class PokemonBot:
             self.image_processor.check(screenshot, self.template_images["CROSS_BUTTON"], None) or
             self.image_processor.check(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], None) or
             self.image_processor.check(screenshot, self.template_images["BATTLE_SCREEN"], None)
-        )    
+        )
+    
+    def capture_region(self, region):
+        cv2.imwrite("screenshot_region.png", self.image_processor.capture_region(region))

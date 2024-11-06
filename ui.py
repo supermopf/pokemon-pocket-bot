@@ -48,6 +48,28 @@ class BotUI:
         self.screenshot_button = tk.Button(action_frame, text="Screenshot", command=self.take_screenshot, width=20, relief=tk.RAISED, bd=3, font=("Helvetica", 10))
         self.screenshot_button.pack(side=tk.LEFT, padx=5)
 
+        region_frame = tk.Frame(self.root)
+        region_frame.pack(pady=10)
+
+        tk.Label(region_frame, text="Start X:", font=("Helvetica", 10)).grid(row=0, column=0, padx=5)
+        self.start_x_entry = tk.Entry(region_frame, width=15, font=("Helvetica", 10))
+        self.start_x_entry.grid(row=0, column=1)
+
+        tk.Label(region_frame, text="Start Y:", font=("Helvetica", 10)).grid(row=0, column=2, padx=5)
+        self.start_y_entry = tk.Entry(region_frame, width=15, font=("Helvetica", 10))
+        self.start_y_entry.grid(row=0, column=3)
+
+        tk.Label(region_frame, text="Width:", font=("Helvetica", 10)).grid(row=1, column=0, padx=5)
+        self.width_entry = tk.Entry(region_frame, width=15, font=("Helvetica", 10))
+        self.width_entry.grid(row=1, column=1)
+
+        tk.Label(region_frame, text="Height:", font=("Helvetica", 10)).grid(row=1, column=2, padx=5)
+        self.height_entry = tk.Entry(region_frame, width=15, font=("Helvetica", 10))
+        self.height_entry.grid(row=1, column=3)
+
+        self.region_screenshot_button = tk.Button(region_frame, text="Capture Region", command=self.take_region_screenshot, width=20, relief=tk.RAISED, bd=3, font=("Helvetica", 10))
+        self.region_screenshot_button.grid(row=2, column=0, columnspan=4, pady=10)
+
         self.status_label = tk.Label(self.root, text="Status: Not running", font=("Helvetica", 10))
         self.status_label.pack()
 
@@ -102,3 +124,10 @@ class BotUI:
     def take_screenshot(self):
         screenshot = take_screenshot()
         self.log_message("Screenshot taken.")
+
+    def take_region_screenshot(self):
+        self.log_message(self.start_x_entry.get())
+
+        if self.start_x_entry.get() and self.start_y_entry.get() and self.width_entry.get() and self.height_entry.get():
+            self.bot.capture_region((int(self.start_x_entry.get()), int(self.start_y_entry.get()), int(self.width_entry.get()), int(self.height_entry.get())))
+            self.log_message("Region screenshot taken.")
