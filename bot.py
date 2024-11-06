@@ -190,18 +190,6 @@ class PokemonBot:
             self.reset_view()
         time.sleep(0.5)
 
-        self.try_attack()
-        ## Check if i can attach an energy to the main card
-        self.log_callback(f"Trying to attach an energy...")
-        self.add_energy_to_pokemon()
-        if not self.running:
-            return False
-        ## Check if i can attack
-        self.try_attack()
-
-        if not self.running:
-            return False
-
     def add_energy_to_pokemon(self):
         if not self.running:
             return False
@@ -217,16 +205,22 @@ class PokemonBot:
         for i in range(self.number_of_cards):
             if not self.running:
                 break
-            self.add_energy_to_pokemon()
-            self.try_attack()
             self.reset_view()
 
             self.log_callback(f"Checking card {i+1} at position ({x}, {self.card_y})")
 
             zoomed_card_image = self.battle_actions.get_card(x, self.card_y)
             if debug_images:
-                unique_id = str(uuid.uuid4())  # Convert UUID to string
-                cv2.imwrite(f"{unique_id}.png",zoomed_card_image)
+                debug_images_folder = "debug_images"
+
+                if not os.path.exists(debug_images_folder):
+                    os.makedirs(debug_images_folder)
+
+                unique_id = str(uuid.uuid4())
+                image_path = os.path.join(debug_images_folder, f"{unique_id}.png")
+    
+                cv2.imwrite(image_path,zoomed_card_image)
+
             card_name = self.battle_actions.identify_card(zoomed_card_image)
             hand_cards.append(card_name.capitalize() if card_name else "Unknown Card")
 
@@ -344,7 +338,7 @@ class PokemonBot:
         self.click_bench_pokemons()
         self.check_n_cards()
         self.reset_view()
-        self.check_cards(False)
+        self.check_cards(True)
         self.reset_view()
         self.check_field()
 
