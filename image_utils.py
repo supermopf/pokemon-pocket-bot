@@ -35,8 +35,9 @@ class ImageProcessor:
     
     def check(self, screenshot, template_image, log_message, similarity_threshold=0.8):
         _, similarity = find_subimage(screenshot, template_image)
-        log_message = f"{log_message} found - {similarity:.2f}" if similarity > similarity_threshold else f"{log_message} NOT found - {similarity:.2f}"
-        self.log_callback(log_message)
+        if log_message:
+            log_message = f"{log_message} found - {similarity:.2f}" if similarity > similarity_threshold else f"{log_message} NOT found - {similarity:.2f}"
+            self.log_callback(log_message)
         return similarity > similarity_threshold
     
     def check_and_click_until_found(self, template_image, log_message, running, stop, similarity_threshold=0.8, max_attempts=50):
@@ -61,10 +62,12 @@ class ImageProcessor:
     def check_and_click(self, screenshot, template_image, log_message, similarity_threshold=0.8):
         position, similarity = find_subimage(screenshot, template_image)
         if similarity > similarity_threshold:
-            self.log_and_click(position, f"{log_message} found - {similarity:.2f}")
+            if log_message:
+                self.log_and_click(position, f"{log_message} found - {similarity:.2f}")
             return True
         else:
-            self.log_callback(f"{log_message} NOT found - {similarity:.2f}")
+            if log_message:
+                self.log_callback(f"{log_message} NOT found - {similarity:.2f}")
             return False
 
     def log_and_click(self, position, message):

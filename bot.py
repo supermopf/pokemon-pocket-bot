@@ -24,7 +24,7 @@ class PokemonBot:
         ## COORDS
         self.zoom_card_region = (200, 360, 570, 400)
         self.turn_check_region = (50, 1560, 200, 20)
-        self.center_x = 540
+        self.center_x = 500
         self.center_y = 960
         self.card_start_x = 500
         self.card_y = 1500
@@ -34,7 +34,7 @@ class PokemonBot:
         self.hand_state = []
         self.active_pokemon = []
         self.bench_pokemon = []
-        self.number_of_cards = 5
+        self.number_of_cards = None
 
         self.image_processor = ImageProcessor(self.log_callback)
         self.battle_actions = BattleActions(self.image_processor, self.template_images, self.card_images, self.zoom_card_region, self.number_of_cards_region, self.log_callback)
@@ -93,16 +93,24 @@ class PokemonBot:
             self.image_processor.check_and_click_until_found(self.template_images["TIME_LIMIT_INDICATOR"], "Time limit indicator", self.running, self.stop)
             screenshot = take_screenshot()
 
-            while not self.image_processor.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended") and (not self.image_processor.check(screenshot, self.template_images["NEXT_BUTTON"], "Next button") and not (self.image_processor.check(screenshot, self.template_images["THANKS_BUTTON"], "Thanks button")) and not (self.image_processor.check(screenshot, self.template_images["BATTLE_BUTTON"], "Battle button")) and not self.image_processor.check(screenshot, self.template_images["CROSS_BUTTON"], "Cross button") and not self.image_processor.check(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen") and not self.image_processor.check(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen")):
+            while not self.game_ended(screenshot) and not self.next_step_available(screenshot):
                 ## Case got a pokemon defeated or sabrina card
                 self.click_bench_pokemons()
 
-                if self.battle_actions.check_turn(self.turn_check_region, self.running) or not self.active_pokemon:
-                    time.sleep(1)
+                self.check_active_pokemon()
+                if not self.active_pokemon:
+                    self.check_n_cards()
+                    self.reset_view()
+                    if self.number_of_cards:
+                        self.check_cards(True)
+                        self.play_turn()
+                elif self.battle_actions.check_turn(self.turn_check_region, self.running):
+                    time.sleep(0.5)
                     self.update_field_and_hand_cards()
-                    self.play_turn()
-                    self.try_attack()
-                    self.end_turn()
+                    if self.number_of_cards and self.battle_actions.check_turn(self.turn_check_region, self.running):
+                        self.play_turn()
+                        self.try_attack()
+                        self.end_turn()
 
                 screenshot = take_screenshot()
 
@@ -128,7 +136,7 @@ class PokemonBot:
         for card in self.hand_state:
             if not self.running:
                 return False
-            
+            self.log_callback(f"Hand cards: {self.hand_state}")
             ## Check if i can attach an energy to the main card
             self.log_callback(f"Trying to attach an energy...")
             self.add_energy_to_pokemon()
@@ -169,8 +177,6 @@ class PokemonBot:
                         "energies": self.active_pokemon[0].get("energies", 0)
                     }
                     time.sleep(1)
-                    self.hand_state.remove(card)
-                    self.number_of_cards -= 1
 
             ## Check if i can play a trainer card            
             if card['info'].get('item_card'):
@@ -181,8 +187,6 @@ class PokemonBot:
                 drag_position((start_x, self.card_y), (self.center_x, self.center_y))
                 
                 time.sleep(1)
-                self.hand_state.remove(card)
-                self.number_of_cards -= 1
 
             screenshot = take_screenshot()
             if self.image_processor.check_and_click(screenshot, self.template_images["START_BATTLE_BUTTON"], "Start battle button"):
@@ -250,13 +254,13 @@ class PokemonBot:
     def click_bench_pokemons(self):
         screenshot = take_screenshot()
         if  not self.running or \
-            self.image_processor.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended") or \
-            self.image_processor.check(screenshot, self.template_images["NEXT_BUTTON"], "Next button") or \
-            self.image_processor.check(screenshot, self.template_images["THANKS_BUTTON"], "Thanks button") or \
-            self.image_processor.check(screenshot, self.template_images["BATTLE_BUTTON"], "Battle button") or \
-            self.image_processor.check(screenshot, self.template_images["CROSS_BUTTON"], "Cross button") or \
-            self.image_processor.check(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen") or \
-            self.image_processor.check(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen"):
+            self.image_processor.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["NEXT_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["THANKS_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["BATTLE_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["CROSS_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], None) or \
+            self.image_processor.check(screenshot, self.template_images["BATTLE_SCREEN"], None):
             return False
         
         self.log_callback(f"Click bench slots...")
@@ -268,21 +272,11 @@ class PokemonBot:
             return False
         self.log_callback(f"Checking the field...")
 
-        zoomed_card_image = self.battle_actions.get_card(self.center_x, self.center_y, 1.5)
-        main_zone_pokemon_name = self.battle_actions.identify_card(zoomed_card_image)
-        if main_zone_pokemon_name:
-            self.active_pokemon = []
-            card_info = self.deck_info.get(main_zone_pokemon_name, default_pokemon_stats)
-            card_info = {
-                "name": main_zone_pokemon_name,
-                "info": card_info,
-                "energies": 0
-            }
-            self.active_pokemon.append(card_info)
+        self.check_active_pokemon()
         self.reset_view()
         self.bench_pokemon = []
         for index, bench_position in enumerate(bench_positions):
-            zoomed_card_image = self.battle_actions.get_card(bench_position[0], bench_position[1], 1.5)
+            zoomed_card_image = self.battle_actions.get_card(bench_position[0], bench_position[1], 1.25)
             bench_zone_pokemon_name = self.battle_actions.identify_card(zoomed_card_image)
             if bench_zone_pokemon_name:
                 card_info = self.deck_info.get(bench_zone_pokemon_name, default_pokemon_stats)
@@ -310,17 +304,32 @@ class PokemonBot:
         for idx, pokemon in enumerate(self.bench_pokemon, start=1):
             info = pokemon["info"]
             self.log_callback(f"| Bench Slot {idx}: {pokemon['name']} |")
+
+    def check_active_pokemon(self):
+        zoomed_card_image = self.battle_actions.get_card(self.center_x, self.center_y, 1.25)
+        main_zone_pokemon_name = self.battle_actions.identify_card(zoomed_card_image)
+        if main_zone_pokemon_name:
+            self.active_pokemon = []
+            card_info = self.deck_info.get(main_zone_pokemon_name, default_pokemon_stats)
+            card_info = {
+                "name": main_zone_pokemon_name,
+                "info": card_info,
+                "energies": 0
+            }
+            self.active_pokemon.append(card_info)
+        else:
+            self.active_pokemon = []
     
     def reset_view(self):
         screenshot = take_screenshot()
         if  not self.running or \
-            self.image_processor.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended") or \
-            self.image_processor.check(screenshot, self.template_images["NEXT_BUTTON"], "Next button") or \
-            self.image_processor.check(screenshot, self.template_images["THANKS_BUTTON"], "Thanks button") or \
-            self.image_processor.check(screenshot, self.template_images["BATTLE_BUTTON"], "Battle button") or \
-            self.image_processor.check(screenshot, self.template_images["CROSS_BUTTON"], "Cross button") or \
-            self.image_processor.check(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen") or \
-            self.image_processor.check(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen"):
+            self.image_processor.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["NEXT_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["THANKS_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["BATTLE_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["CROSS_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], None) or \
+            self.image_processor.check(screenshot, self.template_images["BATTLE_SCREEN"], None):
             return False
         click_position(0,1350)
         click_position(0,1350)
@@ -328,6 +337,7 @@ class PokemonBot:
     def check_n_cards(self):
         if not self.running:
             return False
+        self.number_of_cards = None
         n_cards = self.battle_actions.check_number_of_cards(500, 1500)
         if n_cards:
             self.number_of_cards = int(n_cards)
@@ -338,9 +348,10 @@ class PokemonBot:
         self.click_bench_pokemons()
         self.check_n_cards()
         self.reset_view()
-        self.check_cards(True)
-        self.reset_view()
-        self.check_field()
+        if self.number_of_cards:
+            self.check_cards(True)
+            self.reset_view()
+            self.check_field()
 
     def end_turn(self):
         if not self.running:
@@ -355,13 +366,13 @@ class PokemonBot:
     def try_attack(self):
         screenshot = take_screenshot()
         if  not self.running or \
-            self.image_processor.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended") or \
-            self.image_processor.check(screenshot, self.template_images["NEXT_BUTTON"], "Next button") or \
-            self.image_processor.check(screenshot, self.template_images["THANKS_BUTTON"], "Thanks button") or \
-            self.image_processor.check(screenshot, self.template_images["BATTLE_BUTTON"], "Battle button") or \
-            self.image_processor.check(screenshot, self.template_images["CROSS_BUTTON"], "Cross button") or \
-            self.image_processor.check(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen") or \
-            self.image_processor.check(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen"):
+            self.image_processor.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["NEXT_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["THANKS_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["BATTLE_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["CROSS_BUTTON"], None) or \
+            self.image_processor.check(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], None) or \
+            self.image_processor.check(screenshot, self.template_images["BATTLE_SCREEN"], None):
             return False
         self.add_energy_to_pokemon()
         time.sleep(0.25)
@@ -372,13 +383,26 @@ class PokemonBot:
         click_position(540, 1150)
         click_position(540, 1050)
         screenshot = take_screenshot()
-        time.sleep(0.25)
-        self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
-        self.image_processor.check_and_click(screenshot, self.template_images["OK_2"], "Ok")
-        self.image_processor.check_and_click(screenshot, self.template_images["OK_3"], "Ok")
+        time.sleep(0.5)
+        self.image_processor.check_and_click(screenshot, self.template_images["OK"], None)
+        self.image_processor.check_and_click(screenshot, self.template_images["OK_2"], None)
+        self.image_processor.check_and_click(screenshot, self.template_images["OK_3"], None)
         screenshot = take_screenshot()
         time.sleep(0.25)
-        self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
-        self.image_processor.check_and_click(screenshot, self.template_images["OK_2"], "Ok")
-        self.image_processor.check_and_click(screenshot, self.template_images["OK_3"], "Ok")
+        self.image_processor.check_and_click(screenshot, self.template_images["OK"], None)
+        self.image_processor.check_and_click(screenshot, self.template_images["OK_2"], None)
+        self.image_processor.check_and_click(screenshot, self.template_images["OK_3"], None)
         self.reset_view()
+
+    def game_ended(self, screenshot):
+        return self.image_processor.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended")
+
+    def next_step_available(self, screenshot):
+        return (
+            self.image_processor.check(screenshot, self.template_images["NEXT_BUTTON"], None) or
+            self.image_processor.check(screenshot, self.template_images["THANKS_BUTTON"], None) or
+            self.image_processor.check(screenshot, self.template_images["BATTLE_BUTTON"], None) or
+            self.image_processor.check(screenshot, self.template_images["CROSS_BUTTON"], None) or
+            self.image_processor.check(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], None) or
+            self.image_processor.check(screenshot, self.template_images["BATTLE_SCREEN"], None)
+        )    
