@@ -141,6 +141,7 @@ class PokemonBot:
         
         ## Check playable cards (main field or bench is empty)
         if len(self.hand_state) < 8:
+            card_offset_x = card_offset_mapping.get(self.number_of_cards, 20)
             for card in self.hand_state:
                 ## Check if i can play a trainer card            
                 if card['info'].get('item_card'):
@@ -154,7 +155,6 @@ class PokemonBot:
                     return False
                 self.log_callback(f"Hand cards: {self.hand_state}")
                 
-                card_offset_x = card_offset_mapping.get(self.number_of_cards, 20)
                 start_x = self.card_start_x - (card['position'] * card_offset_x)
                 if not self.active_pokemon and card['info']['level'] == 0 and not card['info']['item_card']:
                     drag_position((start_x, self.card_y), (self.center_x, self.center_y))
