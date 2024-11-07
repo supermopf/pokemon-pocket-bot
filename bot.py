@@ -204,7 +204,7 @@ class PokemonBot:
         self.add_energy_to_pokemon()
 
         ## Check playable cards (main field or bench is empty)
-        if len(self.hand_state) < 8:
+        if len(self.hand_state) > 0 and len(self.hand_state) < 8:
             card_offset_x = card_offset_mapping.get(self.number_of_cards, 20)
             for card in self.hand_state:
                 ## Check if i can play a trainer card
@@ -622,11 +622,11 @@ class PokemonBot:
         time.sleep(0.25)
         self.reset_view()
         click_position(self.center_x, self.center_y)
-        time.sleep(0.25)
+        time.sleep(0.5)
         click_position(540, 1250)
         click_position(540, 1150)
         click_position(540, 1050)
-        time.sleep(0.25)
+        time.sleep(0.5)
         click_position(570, 1070)
         click_position(570, 1070)
         click_position(570, 1070)
