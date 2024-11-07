@@ -6,7 +6,7 @@ default_pokemon_stats = {
     "item_card": False
 }
 
-bench_positions = [(200, 1250),(540, 1250),(750, 1250), (200, 1200),(540, 1200),(750, 1200)]
+bench_positions = [(200, 1250),(500, 1250),(700, 1250)]
 
 card_offset_mapping = {
     2: 90,
