@@ -240,7 +240,7 @@ class PokemonBot:
             card_info_with_position = {
                 "name": card_name,
                 "info": card_info,
-                "position": i+1
+                "position": i
             }
             self.hand_state.append(card_info_with_position)
 
