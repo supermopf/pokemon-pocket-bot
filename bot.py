@@ -453,8 +453,16 @@ class PokemonBot:
                 )
                 # Update all can_evolve flags
                 for key, value in self.deck_info.items():
+                    # Check if current card can evolve from any existing cards
                     if value.get("evolves_from", "").lower() == card_name.lower():
                         self.deck_info[key]["can_evolve"] = True
+
+                    # Check if any existing cards can evolve from current card
+                    if (
+                        card_info.get("evolves_from", "").lower()
+                        == value.get("name", "").lower()
+                    ):
+                        card_info["can_evolve"] = True
 
                 save_deck(self.deck_info)
 
