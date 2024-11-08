@@ -120,7 +120,7 @@ class PokemonBot:
             ### BATTLE START
             self.image_processor.check_and_click_until_found(
                 self.template_images["TIME_LIMIT_INDICATOR"],
-                "Time limit indicator",
+                'Time limit indicator',
                 self.running,
                 self.stop,
             )

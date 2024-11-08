@@ -54,14 +54,14 @@ class BattleActions:
         if run_event:
             if not self.image_processor.check_and_click_until_found(
                 self.template_images["EVENT_MATCH_SCREEN"],
-                "Event Match Screen",
+                'Event Match Screen',
                 running,
                 stop,
                 max_attempts=10,
             ):
                 if not self.image_processor.check_and_click_until_found(
                     self.template_images["RANDOM_MATCH_SCREEN"],
-                    "Random Match Screen",
+                    'Random Match Screen',
                     running,
                     stop,
                     max_attempts=10,
@@ -70,7 +70,7 @@ class BattleActions:
         else:
             if not self.image_processor.check_and_click_until_found(
                 self.template_images["RANDOM_MATCH_SCREEN"],
-                "Random Match Screen",
+                'Random Match Screen',
                 running,
                 stop,
                 max_attempts=10,
@@ -78,7 +78,7 @@ class BattleActions:
                 return False
         if not self.image_processor.check_and_click_until_found(
             self.template_images["BATTLE_BUTTON"],
-            "Battle Button",
+            'Battle Button',
             running,
             stop,
             max_attempts=10,
@@ -103,7 +103,7 @@ class BattleActions:
                     break
             time.sleep(2)
             self.image_processor.check_and_click_until_found(
-                self.template_images["CROSS_BUTTON"], "Cross button", running, stop
+                self.template_images["CROSS_BUTTON"], 'Cross button', running, stop
             )
             time.sleep(4)
         else:
