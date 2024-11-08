@@ -113,6 +113,7 @@ class PokemonBot:
                 self.image_processor.check_and_click(
                     screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen"
                 )
+            time.sleep(4)
             self.battle_actions.perform_search_battle_actions(
                 self.running, self.stop, run_event=True
             )
