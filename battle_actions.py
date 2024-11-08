@@ -29,7 +29,6 @@ class BattleActions:
         screenshot2 = self.image_processor.capture_region(turn_check_region)
 
         similarity = self.image_processor.calculate_similarity(screenshot1, screenshot2)
-        print(similarity)
         if similarity < 0.95:
             self.log_callback("It's your turn")
         else:
