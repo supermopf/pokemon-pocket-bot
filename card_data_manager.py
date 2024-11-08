@@ -46,5 +46,8 @@ class CardDataManager:
                 matches.append(card)
         return matches
 
+    def get_card_by_id(self, _id):
+        return self.card_data.get(_id, None)
+
     def get_card_image_url(self, card_id):
         return f"https://static.dotgg.gg/pokepocket/card/{card_id}.webp"
