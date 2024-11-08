@@ -217,10 +217,11 @@ class PokemonBot:
         # Check for playable cards
         if 0 < len(self.hand_state) < 8:
             card_offset_x = card_offset_mapping.get(self.number_of_cards, 20)
+            self.log_callback(f"Hand state: {self.hand_state}")
             for card in self.hand_state:
                 # Check if the card is a trainer card and play it if possible
                 start_x = self.card_start_x - (card["position"] * card_offset_x)
-
+                self.log_callback(f"Checking card in play turn: {card}")
                 if card["info"].get("item_card"):
                     self.log_callback(f"🔹 Playing Trainer Card: **{card['name']}**")
                     drag_position((start_x, self.card_y), (self.center_x, self.center_y))
@@ -231,6 +232,8 @@ class PokemonBot:
                 # Check if we can play a basic Pokémon as the active Pokémon
                 if not self.active_pokemon and card["info"]["level"] == 0:
                     self.log_callback(f"🆕 Setting Active Pokémon: **{card['name']}**")
+                    self.reset_view()
+                    time.sleep(0.5)
                     drag_position((start_x, self.card_y), (self.center_x, self.center_y))
                     self.active_pokemon.append(card)
                     time.sleep(1)
@@ -281,7 +284,6 @@ class PokemonBot:
                     self.log_callback("⚔️ **Battle Start!**")
                     time.sleep(1)
                 self.reset_view()
-
         else:
             # Default actions if no playable cards
             self.reset_view()
