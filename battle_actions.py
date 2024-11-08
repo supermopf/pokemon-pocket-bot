@@ -45,7 +45,7 @@ class BattleActions:
     def perform_search_battle_actions(self, running, stop, run_event=False):
         if not self.image_processor.check_and_click_until_found(
             self.template_images["VERSUS_SCREEN"],
-            "Versus Screen",
+            'Versus Screen',
             running,
             stop,
             max_attempts=10,

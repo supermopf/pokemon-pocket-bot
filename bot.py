@@ -285,7 +285,6 @@ class PokemonBot:
                 ):
                     time.sleep(1)
                 self.reset_view()
-
         else:
             self.reset_view()
             self.add_energy_to_pokemon()
