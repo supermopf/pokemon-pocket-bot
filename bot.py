@@ -453,7 +453,7 @@ class PokemonBot:
                 )
                 # Update all can_evolve flags
                 for key, value in self.deck_info.items():
-                    if value.get("evolves_from") == card_name:
+                    if value.get("evolves_from", "").lower() == card_name.lower():
                         self.deck_info[key]["can_evolve"] = True
 
                 save_deck(self.deck_info)
