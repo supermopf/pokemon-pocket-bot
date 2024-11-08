@@ -4,6 +4,7 @@ import threading
 import numpy as np
 from adb_utils import connect_to_emulator, click_position, take_screenshot, find_subimage, long_press_position
 from loaders import load_template_images
+import subprocess
 
 
 class PokemonConcedeBot:
@@ -30,10 +31,39 @@ class PokemonConcedeBot:
     def stop(self):
         self.running = False
 
+
     def connect_and_run(self):
-        connect_to_emulator(self.app_state.emulator_name)
+        if self.app_state.emulator_name:
+            connect_to_emulator(self.app_state.emulator_name)
+        else:
+            emulator_name = self.get_emulator_name()
+            connect_to_emulator(emulator_name)
         self.log_callback("Connected to emulator")
         self.run_script()
+
+
+    def get_emulator_name(self):
+        try:
+            result = subprocess.run(
+                ["adb", "devices"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+
+            output = result.stdout
+
+            lines = output.splitlines()
+
+            devices = [line.split("\t")[0] for line in lines[1:] if "device" in line]
+
+            if devices:
+                return devices[0]
+            else:
+                return None
+        except Exception as e:
+            print(f"Error getting emulator name: {e}")
+            return None    
 
     def run_script(self):
         while self.running:
