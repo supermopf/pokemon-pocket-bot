@@ -121,7 +121,7 @@ class PokemonBot:
             ### BATTLE START
             self.image_processor.check_and_click_until_found(
                 self.template_images["TIME_LIMIT_INDICATOR"],
-                'Time limit indicator',
+                "Time limit indicator",
                 self.running,
                 self.stop,
             )
@@ -459,12 +459,16 @@ class PokemonBot:
                 # Update all can_evolve flags
                 for key, value in self.deck_info.items():
                     # Check if current card can evolve from any existing cards
-                    if value.get("evolves_from", "").lower() == card_name.lower():
+                    if (
+                        value.get("evolves_from") is not None
+                        and value.get("evolves_from", "").lower() == card_name.lower()
+                    ):
                         self.deck_info[key]["can_evolve"] = True
 
                     # Check if any existing cards can evolve from current card
                     if (
-                        card_info.get("evolves_from", "").lower()
+                        card_info.get("evolves_from") is not None
+                        and card_info.get("evolves_from", "").lower()
                         == value.get("name", "").lower()
                     ):
                         card_info["can_evolve"] = True
