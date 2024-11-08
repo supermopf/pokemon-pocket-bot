@@ -2,27 +2,37 @@ import time
 import cv2
 import threading
 import numpy as np
-from adb_utils import connect_to_emulator, click_position, take_screenshot, find_subimage, long_press_position, drag_position
+from adb_utils import (
+    connect_to_emulator,
+    click_position,
+    take_screenshot,
+    drag_position,
+)
 from loaders import load_template_images, load_all_cards
 import uuid
 import os
-from deck import sandslash_deck 
+from deck import deck_info, save_deck
+from card_data_manager import CardDataManager
 from image_utils import ImageProcessor
 from battle_actions import BattleActions
 from constants import default_pokemon_stats, bench_positions, card_offset_mapping
 import subprocess
+import requests
+
 
 class PokemonBot:
-    def __init__(self, app_state, log_callback):
+    def __init__(self, app_state, log_callback, ui_instance):
         self.app_state = app_state
         self.log_callback = log_callback
         self.running = False
         self.template_images = load_template_images("images")
         self.card_images = load_all_cards("images/cards")
-        self.deck_info = sandslash_deck
+        self.deck_info = deck_info
+        self.card_data_manager = CardDataManager()
+        self.ui_instance = ui_instance
 
         ## COORDS
-        self.zoom_card_region = (200, 360, 570, 400)
+        self.zoom_card_region = (80, 255, 740, 1020)
         self.turn_check_region = (50, 1560, 200, 20)
         self.center_x = 400
         self.center_y = 900
@@ -37,7 +47,14 @@ class PokemonBot:
         self.number_of_cards = None
 
         self.image_processor = ImageProcessor(self.log_callback)
-        self.battle_actions = BattleActions(self.image_processor, self.template_images, self.card_images, self.zoom_card_region, self.number_of_cards_region, self.log_callback)
+        self.battle_actions = BattleActions(
+            self.image_processor,
+            self.template_images,
+            self.card_images,
+            self.zoom_card_region,
+            self.number_of_cards_region,
+            self.log_callback,
+        )
 
     def start(self):
         if not self.app_state.program_path:
@@ -49,17 +66,21 @@ class PokemonBot:
     def stop(self):
         self.running = False
 
-
     def get_emulator_name(self):
         try:
-            result = subprocess.run(['adb', 'devices'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            
+            result = subprocess.run(
+                ["adb", "devices"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+
             output = result.stdout
-            
+
             lines = output.splitlines()
-            
-            devices = [line.split('\t')[0] for line in lines[1:] if 'device' in line]
-            
+
+            devices = [line.split("\t")[0] for line in lines[1:] if "device" in line]
+
             if devices:
                 return devices[0]
             else:
@@ -67,7 +88,7 @@ class PokemonBot:
         except Exception as e:
             print(f"Error getting emulator name: {e}")
             return None
-        
+
     def connect_and_run(self):
         if self.app_state.emulator_name:
             connect_to_emulator(self.app_state.emulator_name)
@@ -84,35 +105,69 @@ class PokemonBot:
             screenshot = take_screenshot()
 
             ### GO THROUGH MENUS TO FIND A BATTLE
-            if not self.image_processor.check_and_click(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], "Battle already screen"):
-                self.image_processor.check_and_click(screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen")
-            self.battle_actions.perform_search_battle_actions(self.running, self.stop, run_event=True)
+            if not self.image_processor.check_and_click(
+                screenshot,
+                self.template_images["BATTLE_ALREADY_SCREEN"],
+                "Battle already screen",
+            ):
+                self.image_processor.check_and_click(
+                    screenshot, self.template_images["BATTLE_SCREEN"], "Battle screen"
+                )
+            self.battle_actions.perform_search_battle_actions(
+                self.running, self.stop, run_event=True
+            )
 
             ### BATTLE START
-            self.image_processor.check_and_click_until_found(self.template_images["TIME_LIMIT_INDICATOR"], "Time limit indicator", self.running, self.stop)
+            self.image_processor.check_and_click_until_found(
+                self.template_images["TIME_LIMIT_INDICATOR"],
+                "Time limit indicator",
+                self.running,
+                self.stop,
+            )
             screenshot = take_screenshot()
 
-            while not self.game_ended(screenshot) and not self.next_step_available(screenshot):
+            while not self.game_ended(screenshot) and not self.next_step_available(
+                screenshot
+            ):
                 ## Case got a pokemon defeated or sabrina card
                 self.click_bench_pokemons()
 
                 self.check_active_pokemon()
                 self.reset_view()
-                if self.image_processor.check(screenshot, self.template_images["GOING_FIRST_INDICATOR"], None) or self.image_processor.check(screenshot, self.template_images["GOING_SECOND_INDICATOR"], None):
+                if self.image_processor.check(
+                    screenshot, self.template_images["GOING_FIRST_INDICATOR"], None
+                ) or self.image_processor.check(
+                    screenshot, self.template_images["GOING_SECOND_INDICATOR"], None
+                ):
                     self.check_n_cards()
                     self.reset_view()
                     if self.number_of_cards:
                         self.check_cards(True)
                         for card in self.hand_state:
-                            card_offset_x = card_offset_mapping.get(self.number_of_cards, 20)
-                            start_x = self.card_start_x - (card['position'] * card_offset_x)
-                            if card['info']['level'] == 0 and not card['info']['item_card']:
-                                drag_position((start_x, self.card_y), (self.center_x, self.center_y))
+                            card_offset_x = card_offset_mapping.get(
+                                self.number_of_cards, 20
+                            )
+                            start_x = self.card_start_x - (
+                                card["position"] * card_offset_x
+                            )
+                            if (
+                                card["info"]["level"] == 0
+                                and not card["info"]["item_card"]
+                            ):
+                                drag_position(
+                                    (start_x, self.card_y),
+                                    (self.center_x, self.center_y),
+                                )
                                 self.active_pokemon.append(card)
-                elif self.battle_actions.check_turn(self.turn_check_region, self.running) and self.active_pokemon:
+                elif (
+                    self.battle_actions.check_turn(self.turn_check_region, self.running)
+                    and self.active_pokemon
+                ):
                     self.update_field_and_hand_cards()
                     self.reset_view()
-                    if self.number_of_cards and self.battle_actions.check_turn(self.turn_check_region, self.running):
+                    if self.number_of_cards and self.battle_actions.check_turn(
+                        self.turn_check_region, self.running
+                    ):
                         self.play_turn()
                         self.try_attack()
                         self.end_turn()
@@ -122,154 +177,369 @@ class PokemonBot:
 
             ### GO TO MAIN SCREEN
             time.sleep(1)
-            if self.image_processor.check_and_click(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended"):
+            if self.image_processor.check_and_click(
+                screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended"
+            ):
                 time.sleep(1)
-            if self.image_processor.check_and_click(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended"):
+            if self.image_processor.check_and_click(
+                screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended"
+            ):
                 time.sleep(1)
-            if self.image_processor.check_and_click(screenshot, self.template_images["NEXT_BUTTON"], "Next button"):
+            if self.image_processor.check_and_click(
+                screenshot, self.template_images["NEXT_BUTTON"], "Next button"
+            ):
                 time.sleep(1)
-            if self.image_processor.check_and_click(screenshot, self.template_images["THANKS_BUTTON"], "Thanks button"):
+            if self.image_processor.check_and_click(
+                screenshot, self.template_images["THANKS_BUTTON"], "Thanks button"
+            ):
                 time.sleep(2)
-            self.image_processor.check_and_click(screenshot, self.template_images["CROSS_BUTTON"], "Cross button")
-
+            self.image_processor.check_and_click(
+                screenshot, self.template_images["CROSS_BUTTON"], "Cross button"
+            )
 
     def play_turn(self):
         if not self.running:
             return False
         self.log_callback("Start playing my turn...")
         self.add_energy_to_pokemon()
-        
+
         ## Check playable cards (main field or bench is empty)
         if len(self.hand_state) > 0 and len(self.hand_state) < 8:
             card_offset_x = card_offset_mapping.get(self.number_of_cards, 20)
             for card in self.hand_state:
-                ## Check if i can play a trainer card            
-                if card['info'].get('item_card'):
-                    start_x = self.card_start_x - (card['position'] * card_offset_x)   
+                ## Check if i can play a trainer card
+                if card["info"].get("item_card"):
+                    start_x = self.card_start_x - (card["position"] * card_offset_x)
                     self.log_callback(f"Playing trainer card: {card['name']}...")
-                    drag_position((start_x, self.card_y), (self.center_x, self.center_y))
+                    drag_position(
+                        (start_x, self.card_y), (self.center_x, self.center_y)
+                    )
                     time.sleep(1)
                     drag_position((500, 1250), (self.center_x, self.center_y))
                     break
                 if not self.running:
                     return False
                 self.log_callback(f"Hand cards: {self.hand_state}")
-                
-                start_x = self.card_start_x - (card['position'] * card_offset_x)
-                if not self.active_pokemon and card['info']['level'] == 0 and not card['info']['item_card']:
-                    drag_position((start_x, self.card_y), (self.center_x, self.center_y))
+
+                start_x = self.card_start_x - (card["position"] * card_offset_x)
+                if (
+                    not self.active_pokemon
+                    and card["info"]["level"] == 0
+                    and not card["info"]["item_card"]
+                ):
+                    drag_position(
+                        (start_x, self.card_y), (self.center_x, self.center_y)
+                    )
                     self.active_pokemon.append(card)
                     time.sleep(1)
                     break
                 elif len(self.bench_pokemon) < 3:
-                    if card['info']['level'] == 0 and not card['info']['item_card'] and card['name']:
+                    if (
+                        card["info"]["level"] == 0
+                        and not card["info"]["item_card"]
+                        and card["name"]
+                    ):
                         for bench_position in bench_positions:
                             self.reset_view()
                             time.sleep(1)
-                            self.log_callback(f"Playing card from position {card['position']+1} to bench {bench_position}...")
+                            self.log_callback(
+                                f"Playing card from position {card['position']+1} to bench {bench_position}..."
+                            )
                             drag_position((start_x, self.card_y), bench_position, 1.5)
 
                         bench_pokemon_info = {
-                            "name": card['name'].capitalize(),
-                            "info": card['info'],
-                            "energies": 0
+                            "name": card["name"].capitalize(),
+                            "info": card["info"],
+                            "energies": 0,
                         }
                         self.bench_pokemon.append(bench_pokemon_info)
                         break
 
                 ## Check if i can evolve the main pokemon
-                elif card['info'].get('evolves_from') and self.active_pokemon:
-                    if card['info']['evolves_from'].lower() == self.active_pokemon[0]['name'].lower():
-                        start_x = self.card_start_x - (card['position'] * card_offset_x)
+                elif card["info"].get("evolves_from") and self.active_pokemon:
+                    if (
+                        card["info"]["evolves_from"].lower()
+                        == self.active_pokemon[0]["name"].lower()
+                    ):
+                        start_x = self.card_start_x - (card["position"] * card_offset_x)
 
-                        self.log_callback(f"Evolving {self.active_pokemon[0]['name']} to {card['name']}...")
-                        drag_position((start_x, self.card_y), (self.center_x, self.center_y))
-                        
+                        self.log_callback(
+                            f"Evolving {self.active_pokemon[0]['name']} to {card['name']}..."
+                        )
+                        drag_position(
+                            (start_x, self.card_y), (self.center_x, self.center_y)
+                        )
+
                         self.active_pokemon[0] = {
-                            "name": card['name'],
-                            "info": card['info'],
-                            "energies": self.active_pokemon[0].get("energies", 0)
+                            "name": card["name"],
+                            "info": card["info"],
+                            "energies": self.active_pokemon[0].get("energies", 0),
                         }
                         time.sleep(1)
                         break
 
-                if self.image_processor.check_and_click(take_screenshot(), self.template_images["START_BATTLE_BUTTON"], "Start battle button"):
+                if self.image_processor.check_and_click(
+                    take_screenshot(),
+                    self.template_images["START_BATTLE_BUTTON"],
+                    "Start battle button",
+                ):
                     time.sleep(1)
                 self.reset_view()
         else:
             self.reset_view()
             self.add_energy_to_pokemon()
-            self.try_attack()    
-        
+            self.try_attack()
+
     def add_energy_to_pokemon(self):
         if not self.running:
             return False
-        drag_position((750,1450), (self.center_x, self.center_y), 0.3)
-    
+        drag_position((750, 1450), (self.center_x, self.center_y), 0.3)
+
+    def convert_api_card_data(self, card_data):
+        # Convert stage to level
+        stage = card_data.get("stage", "Basic")
+        level_mapping = {"Basic": 0, "Stage 1": 1, "Stage 2": 2}
+
+        # Calculate min energy requirement from attacks
+        min_energies = 0  # Default to 0
+        if card_data.get("attack") is None:
+            card_data["attack"] = []
+
+        if card_data["attack"]:  # Only calculate if there are attacks
+            min_energies = float("inf")
+            for attack in card_data["attack"]:
+                info = attack.get("info", "")
+                # Count energy symbols between curly braces
+                if "{" in info and "}" in info:
+                    energy_text = info[info.find("{") + 1 : info.find("}")]
+                    energy_count = len(
+                        energy_text
+                    )  # Each character represents one energy
+                    min_energies = min(min_energies, energy_count)
+
+            # If we still have infinity, it means no valid energy counts were found
+            if min_energies == float("inf"):
+                min_energies = 0
+
+        return {
+            "level": level_mapping.get(stage, 0),
+            "energies": min_energies,
+            "evolves_from": card_data.get("prew_stage_name", None),
+            "can_evolve": False,  # Will be updated when scanning deck
+            "item_card": card_data.get("type", "").lower() in ["item", "supporter"],
+            "id": card_data.get("id", None),
+            "name": card_data.get("name", None),
+            "number": card_data.get("number", None),
+            "set_code": card_data.get("set_code", None),
+            "set_name": card_data.get("set_name", None),
+            "rarity": card_data.get("rarity", None),
+            "color": card_data.get("color", None),
+            "type": card_data.get("type", None),
+            "slug": card_data.get("slug", None),
+        }
+
     def check_cards(self, debug_images=False):
         if not self.running:
             return False
-        self.log_callback(f"Start checking hand cards...")
+        self.log_callback("Start checking hand cards...")
         x = self.card_start_x
         hand_cards = []
         self.hand_state.clear()
+
         for i in range(self.number_of_cards):
             if not self.running:
                 break
             self.reset_view()
 
-            self.log_callback(f"Checking card {i+1} at position ({x}, {self.card_y})")
-
             zoomed_card_image = self.battle_actions.get_card(x, self.card_y)
             if debug_images:
                 debug_images_folder = "debug_images"
-
                 if not os.path.exists(debug_images_folder):
                     os.makedirs(debug_images_folder)
-
                 unique_id = str(uuid.uuid4())
-                image_path = os.path.join(debug_images_folder, f"{unique_id}.png")
-    
-                cv2.imwrite(image_path,zoomed_card_image)
+                cv2.imwrite(f"{debug_images_folder}/{unique_id}.png", zoomed_card_image)
 
             card_name = self.battle_actions.identify_card(zoomed_card_image)
+            selected_card = None
+            if card_name is None:
+                # Unknown card, prompt user
+                event = threading.Event()
+                error_message = (
+                    None
+                    if not card_name
+                    else f"No cards found with name '{card_name}'. Please try again."
+                )
+                self.ui_instance.request_card_name(zoomed_card_image, event)
+
+                # Wait for user input with timeout (10 seconds)
+                if not event.wait(timeout=10):
+                    self.log_callback("Card identification timed out or was cancelled")
+                    continue
+
+                card_name = self.ui_instance.card_name
+                if not card_name:  # User cancelled or timeout occurred
+                    self.log_callback("Card identification was cancelled")
+                    continue
+
+                # Fetch card info from API
+                while True:
+                    cards = self.card_data_manager.get_card_by_name(card_name)
+                    if len(cards) == 0:
+                        # Show error and retry
+                        event = threading.Event()
+                        self.ui_instance.request_card_name(
+                            zoomed_card_image,
+                            event,
+                            error_message=f"No cards found with name '{card_name}'. Please try again.",
+                        )
+                        event.wait()
+                        if not self.ui_instance.card_name:
+                            break
+                        card_name = self.ui_instance.card_name
+                        continue
+
+                    elif len(cards) == 1:
+                        selected_card = cards[0]
+                        break
+
+                    else:
+                        # Compare images to find best match
+                        similarities = []
+                        for card in cards:
+                            image_url = self.card_data_manager.get_card_image_url(
+                                card["id"]
+                            )
+                            response = requests.get(image_url)
+                            image_data = np.asarray(
+                                bytearray(response.content), dtype=np.uint8
+                            )
+                            api_card_image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
+
+                            # Resize images to standard size
+                            standard_size = (200, 300)
+                            resized_api_card_image = cv2.resize(
+                                api_card_image, standard_size
+                            )
+                            resized_full_card_image = cv2.resize(
+                                zoomed_card_image, standard_size
+                            )
+
+                            similarity = self.image_processor.calculate_similarity(
+                                resized_api_card_image, resized_full_card_image
+                            )
+                            similarities.append((card, similarity))
+
+                        similarities.sort(key=lambda x: x[1], reverse=True)
+                        selected_card = similarities[0][0]
+                        self.log_callback(
+                            f"Highest similarity is {similarities[0][1]:.2f}"
+                        )
+
+                        # Show options to user
+                        event = threading.Event()
+                        self.ui_instance.show_card_options(
+                            similarities, zoomed_card_image, event
+                        )
+                        event.wait()
+                        selected_card = self.ui_instance.selected_card
+                        break
+                self.log_callback(f"Selected card: {selected_card}")
+                # Convert API data to our format
+                card_info = self.convert_api_card_data(selected_card)
+
+                # Update deck info with converted data
+                card_name = selected_card["name"].lower()
+                self.deck_info[selected_card["id"]] = card_info
+                self.card_images[selected_card["id"]] = zoomed_card_image
+                # write to the images/cards folder
+                cv2.imwrite(
+                    f"images/cards/{selected_card['id']}.png", zoomed_card_image
+                )
+                # Update all can_evolve flags
+                for key, value in self.deck_info.items():
+                    # Check if current card can evolve from any existing cards
+                    if value.get("evolves_from", "").lower() == card_name.lower():
+                        self.deck_info[key]["can_evolve"] = True
+
+                    # Check if any existing cards can evolve from current card
+                    if (
+                        card_info.get("evolves_from", "").lower()
+                        == value.get("name", "").lower()
+                    ):
+                        card_info["can_evolve"] = True
+
+                save_deck(self.deck_info)
+
             hand_cards.append(card_name.capitalize() if card_name else "Unknown Card")
 
-            card_info = self.deck_info.get(card_name, default_pokemon_stats)
-            
+            card_info = self.deck_info.get(card_name, None)
+            if card_info is None:
+                self.log_callback(
+                    f"Card {card_name} not found in deck, getting from api..."
+                )
+                # get from the api the card info
+                card = self.card_data_manager.get_card_by_id(card_name)
+                if card:
+                    card_info = self.convert_api_card_data(card)
+                    # Update deck info with the new card
+                    self.deck_info[card_name] = card_info
+                    save_deck(self.deck_info)
+                    self.log_callback(f"Card {card_name} found in api, added to deck")
+                else:
+                    card_info = (
+                        default_pokemon_stats  # Fallback to default stats if not found
+                    )
+                    self.log_callback(
+                        f"Card {card_name} not found in api, added default stats"
+                    )
+
             card_info_with_position = {
                 "name": card_name,
                 "info": card_info,
-                "position": i
+                "position": i,
             }
             self.hand_state.append(card_info_with_position)
 
             x -= card_offset_mapping.get(self.number_of_cards, 20)
 
-        hand_description = ', '.join(hand_cards)
-        self.log_callback(f"Your hand contains: {hand_description}")
-        #self.log_callback("Detailed hand information:")
+        self.log_callback(f"Your hand contains: {', '.join(hand_cards)}")
 
         for card in self.hand_state:
             card_name = card["name"]
             card_info = card["info"]
             position = card["position"]
-            
+
             # Log detailed information for each card with position
             self.log_callback(f"- Position {position}: {card_name}")
 
     def click_bench_pokemons(self):
         screenshot = take_screenshot()
-        if  not self.running or \
-            self.image_processor.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], None) or \
-            self.image_processor.check(screenshot, self.template_images["NEXT_BUTTON"], None) or \
-            self.image_processor.check(screenshot, self.template_images["THANKS_BUTTON"], None) or \
-            self.image_processor.check(screenshot, self.template_images["BATTLE_BUTTON"], None) or \
-            self.image_processor.check(screenshot, self.template_images["CROSS_BUTTON"], None) or \
-            self.image_processor.check(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], None) or \
-            self.image_processor.check(screenshot, self.template_images["BATTLE_SCREEN"], None):
+        if (
+            not self.running
+            or self.image_processor.check(
+                screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], None
+            )
+            or self.image_processor.check(
+                screenshot, self.template_images["NEXT_BUTTON"], None
+            )
+            or self.image_processor.check(
+                screenshot, self.template_images["THANKS_BUTTON"], None
+            )
+            or self.image_processor.check(
+                screenshot, self.template_images["BATTLE_BUTTON"], None
+            )
+            or self.image_processor.check(
+                screenshot, self.template_images["CROSS_BUTTON"], None
+            )
+            or self.image_processor.check(
+                screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], None
+            )
+            or self.image_processor.check(
+                screenshot, self.template_images["BATTLE_SCREEN"], None
+            )
+        ):
             return False
-        
+
         self.log_callback(f"Click bench slots...")
         for bench_position in bench_positions:
             click_position(bench_position[0], bench_position[1])
@@ -283,20 +553,25 @@ class PokemonBot:
         self.reset_view()
         self.bench_pokemon = []
         for index, bench_position in enumerate(bench_positions):
-            zoomed_card_image = self.battle_actions.get_card(bench_position[0], bench_position[1], 1.25)
-            bench_zone_pokemon_name = self.battle_actions.identify_card(zoomed_card_image)
+            zoomed_card_image = self.battle_actions.get_card(
+                bench_position[0], bench_position[1], 1.25
+            )
+            bench_zone_pokemon_name = self.battle_actions.identify_card(
+                zoomed_card_image
+            )
             if bench_zone_pokemon_name:
-                card_info = self.deck_info.get(bench_zone_pokemon_name, default_pokemon_stats)
+                card_info = self.deck_info.get(
+                    bench_zone_pokemon_name, default_pokemon_stats
+                )
                 card_info = {
                     "name": bench_zone_pokemon_name,
                     "info": card_info,
                     "position": index,
-                    "energies": 0
+                    "energies": 0,
                 }
                 self.bench_pokemon.append(card_info)
             self.reset_view()
             time.sleep(0.25)
-
 
         if self.active_pokemon:
             active = self.active_pokemon[0]
@@ -312,24 +587,28 @@ class PokemonBot:
             self.log_callback(f"| Bench Slot {idx}: {pokemon['name']} |")
 
     def check_active_pokemon(self):
-        zoomed_card_image = self.battle_actions.get_card(self.center_x, self.center_y, 1.25)
+        zoomed_card_image = self.battle_actions.get_card(
+            self.center_x, self.center_y, 1.25
+        )
         main_zone_pokemon_name = self.battle_actions.identify_card(zoomed_card_image)
         if main_zone_pokemon_name:
             self.active_pokemon = []
-            card_info = self.deck_info.get(main_zone_pokemon_name, default_pokemon_stats)
+            card_info = self.deck_info.get(
+                main_zone_pokemon_name, default_pokemon_stats
+            )
             card_info = {
                 "name": main_zone_pokemon_name,
                 "info": card_info,
-                "energies": 0
+                "energies": 0,
             }
             self.active_pokemon.append(card_info)
             self.log_callback(f"Active pokemon: {self.active_pokemon}")
         else:
             self.active_pokemon = []
-    
+
     def reset_view(self):
-        click_position(0,1350)
-        click_position(0,1350)
+        click_position(0, 1350)
+        click_position(0, 1350)
 
     def check_n_cards(self):
         if not self.running:
@@ -358,13 +637,17 @@ class PokemonBot:
         self.reset_view()
         time.sleep(0.25)
         screenshot = take_screenshot()
-        self.image_processor.check_and_click(screenshot, self.template_images["END_TURN"], "End turn")
+        self.image_processor.check_and_click(
+            screenshot, self.template_images["END_TURN"], "End turn"
+        )
         time.sleep(0.25)
-        self.image_processor.check_and_click(screenshot, self.template_images["OK"], "Ok")
+        self.image_processor.check_and_click(
+            screenshot, self.template_images["OK"], "Ok"
+        )
 
     def try_attack(self):
         self.add_energy_to_pokemon()
-        
+
         # Flip a coin action
         drag_position((500, 1250), (self.center_x, self.center_y))
 
@@ -382,17 +665,33 @@ class PokemonBot:
         self.reset_view()
 
     def game_ended(self, screenshot):
-        return self.image_processor.check(screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended")
+        return self.image_processor.check(
+            screenshot, self.template_images["TAP_TO_PROCEED_BUTTON"], "Game ended"
+        )
 
     def next_step_available(self, screenshot):
         return (
-            self.image_processor.check(screenshot, self.template_images["NEXT_BUTTON"], None) or
-            self.image_processor.check(screenshot, self.template_images["THANKS_BUTTON"], None) or
-            self.image_processor.check(screenshot, self.template_images["BATTLE_BUTTON"], None) or
-            self.image_processor.check(screenshot, self.template_images["CROSS_BUTTON"], None) or
-            self.image_processor.check(screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], None) or
-            self.image_processor.check(screenshot, self.template_images["BATTLE_SCREEN"], None)
+            self.image_processor.check(
+                screenshot, self.template_images["NEXT_BUTTON"], None
+            )
+            or self.image_processor.check(
+                screenshot, self.template_images["THANKS_BUTTON"], None
+            )
+            or self.image_processor.check(
+                screenshot, self.template_images["BATTLE_BUTTON"], None
+            )
+            or self.image_processor.check(
+                screenshot, self.template_images["CROSS_BUTTON"], None
+            )
+            or self.image_processor.check(
+                screenshot, self.template_images["BATTLE_ALREADY_SCREEN"], None
+            )
+            or self.image_processor.check(
+                screenshot, self.template_images["BATTLE_SCREEN"], None
+            )
         )
-    
+
     def capture_region(self, region):
-        cv2.imwrite("screenshot_region.png", self.image_processor.capture_region(region))
+        cv2.imwrite(
+            "screenshot_region.png", self.image_processor.capture_region(region)
+        )
