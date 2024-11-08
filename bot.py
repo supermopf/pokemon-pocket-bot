@@ -425,7 +425,8 @@ class PokemonBot:
                         break
 
                 selected_card_id = selected_card["id"] if selected_card else None
-                self.log_callback(f"✨ Selected Card: {selected_card.get('name', 'Unknown')}")
+                if selected_card:
+                    self.log_callback(f"✨ Selected Card: {selected_card.get('name', 'Unknown')}")
                 
                 # Convert and store selected card data
                 card_info = self.convert_api_card_data(selected_card)
