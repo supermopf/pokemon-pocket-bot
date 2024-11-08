@@ -30,7 +30,7 @@ class BattleActions:
         return similarity < 0.95
     
     def perform_search_battle_actions(self, running, stop, run_event=False):
-        if not self.image_processor.check_and_click_until_found(self.template_images["VERSUS_SCREEN"], f"{"VERSUS_SCREEN".replace('_', ' ').title()}", running, stop, max_attempts=10):
+        if not self.image_processor.check_and_click_until_found(self.template_images["VERSUS_SCREEN"], f"{'VERSUS_SCREEN'.replace('_', ' ').title()}", running, stop, max_attempts=10):
             return False
         if run_event:
             if not self.image_processor.check_and_click_until_found(self.template_images["EVENT_MATCH_SCREEN"], f"{"EVENT_MATCH_SCREEN".replace('_', ' ').title()}", running, stop, max_attempts=10):
