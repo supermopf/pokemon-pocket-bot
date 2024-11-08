@@ -121,7 +121,7 @@ class PokemonBot:
             ### BATTLE START
             self.image_processor.check_and_click_until_found(
                 self.template_images["TIME_LIMIT_INDICATOR"],
-                'Time limit indicator',
+                'Time limit indicator',  # noqa
                 self.running,
                 self.stop,
             )
@@ -361,6 +361,7 @@ class PokemonBot:
                 cv2.imwrite(f"{debug_images_folder}/{unique_id}.png", zoomed_card_image)
 
             card_name = self.battle_actions.identify_card(zoomed_card_image)
+            selected_card_id = None
             selected_card = None
             if card_name is None:
                 # Unknown card, prompt user
@@ -444,6 +445,11 @@ class PokemonBot:
                         event.wait()
                         selected_card = self.ui_instance.selected_card
                         break
+                selected_card_id = (
+                    selected_card["id"]
+                    if selected_card is not None and "id" in selected_card
+                    else None
+                )
                 self.log_callback(f"Selected card: {selected_card}")
                 # Convert API data to our format
                 card_info = self.convert_api_card_data(selected_card)
@@ -459,12 +465,16 @@ class PokemonBot:
                 # Update all can_evolve flags
                 for key, value in self.deck_info.items():
                     # Check if current card can evolve from any existing cards
-                    if value.get("evolves_from", "").lower() == card_name.lower():
+                    if (
+                        value.get("evolves_from") is not None
+                        and value.get("evolves_from", "").lower() == card_name.lower()
+                    ):
                         self.deck_info[key]["can_evolve"] = True
 
                     # Check if any existing cards can evolve from current card
                     if (
-                        card_info.get("evolves_from", "").lower()
+                        card_info.get("evolves_from") is not None
+                        and card_info.get("evolves_from", "").lower()
                         == value.get("name", "").lower()
                     ):
                         card_info["can_evolve"] = True
@@ -472,14 +482,17 @@ class PokemonBot:
                 save_deck(self.deck_info)
 
             hand_cards.append(card_name.capitalize() if card_name else "Unknown Card")
-
-            card_info = self.deck_info.get(card_name, None)
+            ## TODO: manage better id and name
+            use_to_search = selected_card_id if selected_card_id else card_name
+            card_info = self.deck_info.get(use_to_search, None)
             if card_info is None:
                 self.log_callback(
                     f"Card {card_name} not found in deck, getting from api..."
                 )
                 # get from the api the card info
                 card = self.card_data_manager.get_card_by_id(card_name)
+                if not card:
+                    card = self.card_data_manager.get_card_by_name(card_name)
                 if card:
                     card_info = self.convert_api_card_data(card)
                     # Update deck info with the new card
