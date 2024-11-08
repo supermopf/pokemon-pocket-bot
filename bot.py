@@ -203,7 +203,7 @@ class PokemonBot:
             return False
         self.log_callback("Start playing my turn...")
         self.add_energy_to_pokemon()
-
+        drag_position((500, 1100), (self.center_x, self.center_y))
         ## Check playable cards (main field or bench is empty)
         if len(self.hand_state) > 0 and len(self.hand_state) < 8:
             card_offset_x = card_offset_mapping.get(self.number_of_cards, 20)
