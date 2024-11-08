@@ -206,12 +206,31 @@ class BotUI:
 
     def request_card_name(self, image, event, error_message=None):
         self.card_name_event = event
+        self.card_name = None  # Reset card_name
         self.root.after(0, self.show_card_prompt, image, error_message)
 
     def show_card_prompt(self, image, error_message=None):
         window = tk.Toplevel(self.root)
         window.title("Unknown Card")
         window.geometry("400x600")
+
+        # Add timeout label
+        timeout_label = tk.Label(window, text="Time remaining: 30s", fg="red")
+        timeout_label.pack(pady=5)
+
+        # Timeout counter
+        remaining_time = 10
+
+        def update_timeout():
+            nonlocal remaining_time
+            if remaining_time > 0 and window.winfo_exists():
+                remaining_time -= 1
+                timeout_label.config(text=f"Time remaining: {remaining_time}s")
+                window.after(1000, update_timeout)
+            elif remaining_time <= 0 and window.winfo_exists():
+                cancel()
+
+        window.after(1000, update_timeout)
 
         # Convert and resize image
         cv_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)

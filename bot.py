@@ -371,10 +371,15 @@ class PokemonBot:
                     else f"No cards found with name '{card_name}'. Please try again."
                 )
                 self.ui_instance.request_card_name(zoomed_card_image, event)
-                event.wait()
-                card_name = self.ui_instance.card_name
 
-                if not card_name:  # User cancelled
+                # Wait for user input with timeout (10 seconds)
+                if not event.wait(timeout=10):
+                    self.log_callback("Card identification timed out or was cancelled")
+                    continue
+
+                card_name = self.ui_instance.card_name
+                if not card_name:  # User cancelled or timeout occurred
+                    self.log_callback("Card identification was cancelled")
                     continue
 
                 # Fetch card info from API
