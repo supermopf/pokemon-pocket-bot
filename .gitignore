@@ -6,3 +6,6 @@ debug_screenshot1.png
 debug_screenshot2.png
 debug_images/
 screenshot_region.png
+images/cards/
+deck.json
+card_data_cache.json
