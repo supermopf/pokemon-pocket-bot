@@ -468,7 +468,27 @@ class PokemonBot:
 
             hand_cards.append(card_name.capitalize() if card_name else "Unknown Card")
 
-            card_info = self.deck_info.get(card_name, default_pokemon_stats)
+            card_info = self.deck_info.get(card_name, None)
+            if card_info is None:
+                self.log_callback(
+                    f"Card {card_name} not found in deck, getting from api..."
+                )
+                # get from the api the card info
+                card = self.card_data_manager.get_card_by_id(card_name)
+                if card:
+                    card_info = self.convert_api_card_data(card)
+                    # Update deck info with the new card
+                    self.deck_info[card_name] = card_info
+                    save_deck(self.deck_info)
+                    self.log_callback(f"Card {card_name} found in api, added to deck")
+                else:
+                    card_info = (
+                        default_pokemon_stats  # Fallback to default stats if not found
+                    )
+                    self.log_callback(
+                        f"Card {card_name} not found in api, added default stats"
+                    )
+
             card_info_with_position = {
                 "name": card_name,
                 "info": card_info,
