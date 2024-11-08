@@ -152,12 +152,22 @@ class PokemonBot:
                         for card in self.hand_state:
                             card_offset_x = card_offset_mapping.get(self.number_of_cards, 20)
                             start_x = self.card_start_x - (card["position"] * card_offset_x)
-                            self.log_callback(f"Card: {card}")
+                            self.log_callback(f"Card: {card['name']}")
                             if card.get("info", False) and card["info"]["level"] == 0 and not card["info"]["item_card"]:
                                 # Log Pokémon being set as active
                                 self.log_callback(f"🆕 Setting Active Pokémon: **{card['name']}**")
-                                drag_position((start_x, self.card_y), (self.center_x, self.center_y))
+                                self.reset_view()
+                                time.sleep(0.5)
+                                drag_position((start_x, self.card_y), (self.center_x, self.center_y), 1)
                                 self.active_pokemon.append(card)
+                                time.sleep(2)
+                                screenshot = take_screenshot()
+                                self.image_processor.check_and_click(
+                                    screenshot,
+                                    self.template_images["START_BATTLE_BUTTON"],
+                                    "Start battle button",
+                                )
+
                 elif self.battle_actions.check_turn(self.turn_check_region, self.running) and self.active_pokemon:
                     # Log if it's the player's turn
                     self.log_callback("🔄 **Player's Turn**: Updating field and cards.")
@@ -435,7 +445,7 @@ class PokemonBot:
                     self.log_callback(f"✨ Card '{card_name}' added to deck.")
 
             hand_cards.append(card_name.capitalize() if card_name else "Unknown Card")
-            self.hand_state.append({"name": card_name, "position": i})
+            self.hand_state.append({"name": card_name, "position": i, "info": card_info})
 
             # Move to next card position
             x -= card_offset_mapping.get(self.number_of_cards, 20)
@@ -532,7 +542,7 @@ class PokemonBot:
         self.log_callback("Dragged to main zone position to inspect active Pokémon.")
         
         # Capturing and identifying the card
-        zoomed_card_image = self.battle_actions.get_card(self.center_x, self.center_y, 1.25)
+        zoomed_card_image = self.battle_actions.get_card(self.center_x, self.center_y, 1.5)
         main_zone_pokemon_name = self.battle_actions.identify_card(zoomed_card_image)
         
         if main_zone_pokemon_name:
